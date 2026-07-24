@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Local SQLite database (rebuilt from JSON via `python -m app.ingest`)
+*.db
+*.db-journal
+*.db-wal
+
+# Env / secrets
+.env
