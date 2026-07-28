@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "INVALID_PREFS",
+    "message": "Some of the values sent aren't valid.",
+    "detail": "[{'type': 'literal_error', 'loc': ('body', 'hard', 'allergens', 0), 'msg': \"Input should be 'peanuts', 'tree_nuts', 'shellfish', 'fish', 'wheat', 'soy', 'milk', 'eggs' or 'sesame'\", 'input': 'moon_dust', 'ctx': {'expected': \"'peanuts', 'tree_nuts', 'shellfish', 'fish', 'wheat', 'soy', 'milk', 'eggs' or 'sesame'\"}}]"
+  }
+}

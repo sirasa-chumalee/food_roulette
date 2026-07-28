@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "db": "backend/food_roulette.db",
+  "restaurants": 50,
+  "menu_items": 1250
+}

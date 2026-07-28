@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "We couldn't find that account.",
+    "detail": null
+  }
+}

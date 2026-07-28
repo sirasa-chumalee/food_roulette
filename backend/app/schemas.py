@@ -1,4 +1,10 @@
-"""Request/response models for the M1 endpoints. See docs/DESIGN.md §3-5."""
+"""Request/response models for the M1 endpoints. See docs/DESIGN.md §3-5.
+
+These classes *are* the API contract: `docs/api/openapi.yaml` and the fixtures in
+`docs/api/fixtures/` are generated from them, and the Flutter models mirror them.
+Renaming or removing a field here is a breaking contract change (ROADMAP §1,
+Rule 3) — adding an optional one is not.
+"""
 from __future__ import annotations
 
 from typing import Literal
@@ -63,13 +69,24 @@ class SafeDish(BaseModel):
 
 
 class RecommendedRestaurant(BaseModel):
+    """The single object the whole UI is built from (ROADMAP §3.1).
+
+    `rating` and `photo_url` stay null until M4 wires up Google Places; the
+    client must render gracefully without them from day one.
+    """
+
     restaurant_id: str
     name_th: str | None
     name_en: str | None
+    latitude: float | None
+    longitude: float | None
     distance_m: float | None
     price_tier: str | None
+    rating: float | None = None
+    photo_url: str | None = None
     safety_tier: Literal["verified", "unverified"]
     needs_ack: bool
+    ack_reason: str | None = None
     excluded_count: int
     safe_dishes: list[SafeDish]
 
@@ -77,3 +94,27 @@ class RecommendedRestaurant(BaseModel):
 class RecommendOut(BaseModel):
     recommendations: list[RecommendedRestaurant]
     fallback_used: bool
+
+
+# --- Error envelope (ROADMAP §3.2) ------------------------------------------
+# Every non-2xx response from this API has this shape, no exceptions. `message`
+# is safe to show a user; `detail` is for logs and never carries a stack trace.
+
+ErrorCode = Literal[
+    "NO_RESULTS",
+    "INVALID_PREFS",
+    "NOT_FOUND",
+    "LLM_UNAVAILABLE",
+    "UPSTREAM_TIMEOUT",
+    "INTERNAL",
+]
+
+
+class ErrorBody(BaseModel):
+    code: ErrorCode
+    message: str
+    detail: str | None = None
+
+
+class ErrorEnvelope(BaseModel):
+    error: ErrorBody

@@ -22,3 +22,12 @@ DB_PATH = Path(os.environ.get("FR_DB_PATH", BACKEND_DIR / "food_roulette.db"))
 
 # Schema DDL.
 SCHEMA_SQL = BACKEND_DIR / "schema.sql"
+
+# Browser origins allowed to call this API. The Android emulator and a physical
+# device don't send an Origin header at all, so this only matters for Flutter
+# web / DevTools — "*" is fine for local dev and is tightened in deployment.
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("FR_CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]

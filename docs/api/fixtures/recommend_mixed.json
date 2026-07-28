@@ -1,0 +1,96 @@
+{
+  "recommendations": [
+    {
+      "restaurant_id": "tu_place_26",
+      "name_th": "โคตรเล้ง กะเพราเทวดา",
+      "name_en": null,
+      "latitude": 14.0660676,
+      "longitude": 100.6063461,
+      "distance_m": 505.20617641308803,
+      "price_tier": null,
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 16,
+      "safe_dishes": [
+        {
+          "id": 641,
+          "name_th": "เล้งธรรมดา",
+          "name_en": null,
+          "price_thb": 60.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 642,
+          "name_th": "โคตรเล้ง",
+          "name_en": null,
+          "price_thb": 150.0,
+          "spicy_level": 3,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 643,
+          "name_th": "เล้ง!!! โคตรเถื่อน",
+          "name_en": null,
+          "price_thb": 290.0,
+          "spicy_level": 3,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_24",
+      "name_th": "Sister",
+      "name_en": null,
+      "latitude": 14.066322,
+      "longitude": 100.6065309,
+      "distance_m": 491.71128819799554,
+      "price_tier": null,
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 21,
+      "safe_dishes": [
+        {
+          "id": 588,
+          "name_th": "ต้มแซ่บกระดูกอ่อน",
+          "name_en": null,
+          "price_thb": 80.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_16",
+      "name_th": "เจริญเจริญอาหารตามสั่ง ม.ธรรมศาสตร์รังสิต",
+      "name_en": null,
+      "latitude": 14.0660059,
+      "longitude": 100.610379,
+      "distance_m": 818.9279831132177,
+      "price_tier": null,
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "unverified",
+      "needs_ack": true,
+      "ack_reason": "dietary data unverified for these dishes",
+      "excluded_count": 24,
+      "safe_dishes": [
+        {
+          "id": 377,
+          "name_th": "ข้าวกะเพราไข่เยี่ยวม้า",
+          "name_en": null,
+          "price_thb": 50.0,
+          "spicy_level": 0,
+          "safety_tier": "unverified"
+        }
+      ]
+    }
+  ],
+  "fallback_used": false
+}

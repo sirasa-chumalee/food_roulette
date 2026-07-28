@@ -1,0 +1,30 @@
+{
+  "recommendations": [
+    {
+      "restaurant_id": "tu_place_16",
+      "name_th": "เจริญเจริญอาหารตามสั่ง ม.ธรรมศาสตร์รังสิต",
+      "name_en": null,
+      "latitude": 14.0660059,
+      "longitude": 100.610379,
+      "distance_m": 818.9279831132177,
+      "price_tier": null,
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "unverified",
+      "needs_ack": true,
+      "ack_reason": "dietary data unverified for these dishes",
+      "excluded_count": 24,
+      "safe_dishes": [
+        {
+          "id": 377,
+          "name_th": "ข้าวกะเพราไข่เยี่ยวม้า",
+          "name_en": null,
+          "price_thb": 50.0,
+          "spicy_level": 0,
+          "safety_tier": "unverified"
+        }
+      ]
+    }
+  ],
+  "fallback_used": true
+}

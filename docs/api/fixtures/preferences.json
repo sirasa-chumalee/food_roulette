@@ -1,0 +1,21 @@
+{
+  "hard": {
+    "allergens": [
+      "peanuts",
+      "shellfish"
+    ],
+    "halal": true,
+    "no_beef": false,
+    "vegetarian": false,
+    "vegan": false,
+    "jain": false,
+    "celiac": false
+  },
+  "soft": {
+    "spicy_tolerance": 2,
+    "price_tier": "$$",
+    "diet_style": "none",
+    "wants_parking": false
+  },
+  "user_id": "019b72f640f847ba907a31ee8f16945f"
+}
