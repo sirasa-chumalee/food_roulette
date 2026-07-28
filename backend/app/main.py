@@ -23,6 +23,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__, config, db, ranking, schemas
 from . import filter as safety_filter  # `filter` shadows the builtin otherwise
+from .llm import extract as llm_extract
+from .llm import narrate as llm_narrate
+
+# Used whenever Gemini couldn't write the reply. The cards beside it are real
+# either way, so this says "here they are" rather than apologising for an outage.
+DEGRADED_REPLY = "Here's what fits your saved preferences."
 
 
 @asynccontextmanager
@@ -224,6 +230,8 @@ def _ack_reason(hard: schemas.HardConstraints) -> str:
         )
     if hard.celiac:
         return "gluten data unverified for these dishes"
+    if hard.jay:
+        return "เจ (jay) data unverified for these dishes"
     return "dietary data unverified for these dishes"
 
 
@@ -290,26 +298,21 @@ def put_preferences(user_id: str, body: schemas.PreferencesIn) -> schemas.Prefer
     return schemas.PreferencesOut(user_id=user_id, hard=body.hard, soft=body.soft)
 
 
-@app.post("/recommend", response_model=schemas.RecommendOut)
-def recommend(body: schemas.RecommendIn) -> schemas.RecommendOut:
-    """Pick restaurants for this user. First we throw out every dish that
-    breaks a hard rule (allergy, halal, etc.) — no exceptions. Then, among
-    what's left, we sort by how well it matches soft preferences like spice
-    level and distance."""
-    conn = db.connect()
-    try:
-        user = conn.execute("SELECT id FROM users WHERE id = ?;", (body.user_id,)).fetchone()
-        if user is None:
-            raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
-        hard, soft = _load_preferences(conn, body.user_id)
+def _recommend_for(
+    conn,
+    body: schemas.RecommendIn | schemas.ChatIn,
+    hard: schemas.HardConstraints,
+    soft: schemas.SoftPreferences,
+) -> tuple[list[schemas.RecommendedRestaurant], bool]:
+    """Filter, rank, and shape into cards. Shared by /recommend and /chat.
 
-        # Hard filter first, in SQL. Everything after this line is ordering.
-        surviving = safety_filter.safe_dishes(conn, hard)
-        restaurants = {
-            row["id"]: dict(row) for row in conn.execute("SELECT * FROM restaurants;")
-        }
-    finally:
-        conn.close()
+    Chat gets its recommendations from this same function on purpose: there is
+    one safety path, and adding a conversation in front of it must not create a
+    second one.
+    """
+    # Hard filter first, in SQL. Everything after this line is ordering.
+    surviving = safety_filter.safe_dishes(conn, hard)
+    restaurants = {row["id"]: dict(row) for row in conn.execute("SELECT * FROM restaurants;")}
 
     candidates = [
         ranking.Candidate(
@@ -327,13 +330,87 @@ def recommend(body: schemas.RecommendIn) -> schemas.RecommendOut:
     # "did anything verified survive the filter?", which `limit` can't change.
     fallback = safety_filter.fallback_used(surviving)
 
-    return schemas.RecommendOut(
-        recommendations=[_to_card(c, hard) for c in ranked[: body.limit]],
-        fallback_used=fallback,
+    return [_to_card(c, hard) for c in ranked[: body.limit]], fallback
+
+
+@app.post("/recommend", response_model=schemas.RecommendOut)
+def recommend(body: schemas.RecommendIn) -> schemas.RecommendOut:
+    """Pick restaurants for this user. First we throw out every dish that
+    breaks a hard rule (allergy, halal, etc.) — no exceptions. Then, among
+    what's left, we sort by how well it matches soft preferences like spice
+    level and distance."""
+    conn = db.connect()
+    try:
+        user = conn.execute("SELECT id FROM users WHERE id = ?;", (body.user_id,)).fetchone()
+        if user is None:
+            raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
+        hard, soft = _load_preferences(conn, body.user_id)
+        recommendations, fallback = _recommend_for(conn, body, hard, soft)
+    finally:
+        conn.close()
+
+    return schemas.RecommendOut(recommendations=recommendations, fallback_used=fallback)
+
+
+@app.post("/chat", response_model=schemas.ChatOut)
+def chat(body: schemas.ChatIn) -> schemas.ChatOut:
+    """Read the message, filter, then describe what survived (DESIGN §6).
+
+    Gemini sits on both ends and never in the middle: it turns the message into
+    preferences, and later writes the reply, but the choice of restaurants is
+    made by the same filter /recommend uses. If Gemini is unreachable the
+    request still succeeds — the user gets their saved-profile recommendations
+    and a `degraded` code explaining why the reply is plain.
+    """
+    session_id = body.session_id or uuid.uuid4().hex
+
+    conn = db.connect()
+    try:
+        user = conn.execute("SELECT id FROM users WHERE id = ?;", (body.user_id,)).fetchone()
+        if user is None:
+            raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
+
+        hard, soft = _load_preferences(conn, body.user_id)
+        degraded: str | None = None
+
+        try:
+            extracted = llm_extract.extract(body.text)
+            # Union, never replace: the message can add restrictions, not lift
+            # the ones already saved.
+            hard = llm_extract.union_hard_constraints(hard, extracted.hard_constraints)
+            soft = llm_extract.union_soft_prefs(soft, extracted.soft_prefs)
+        except llm_extract.ExtractTimeout:
+            degraded = "UPSTREAM_TIMEOUT"
+        except llm_extract.ExtractUnavailable:
+            degraded = "LLM_UNAVAILABLE"
+
+        recommendations, _ = _recommend_for(conn, body, hard, soft)
+    finally:
+        conn.close()
+
+    if degraded:
+        # Nothing was understood from the message, so there's nothing to narrate
+        # beyond the saved profile — and a second Gemini call would fail too.
+        reply = DEGRADED_REPLY
+    else:
+        try:
+            reply = llm_narrate.narrate(body.text, recommendations)
+        except llm_extract.ExtractTimeout:
+            reply, degraded = DEGRADED_REPLY, "UPSTREAM_TIMEOUT"
+        except llm_extract.ExtractUnavailable:
+            # The suggestions are still sound; only the wording was lost, and
+            # the client deserves to know the prose is canned.
+            reply, degraded = DEGRADED_REPLY, "LLM_UNAVAILABLE"
+
+    return schemas.ChatOut(
+        reply=reply,
+        recommendations=recommendations,
+        session_id=session_id,
+        degraded=degraded,
     )
 
 
-def _distance_to(restaurant: dict, body: schemas.RecommendIn) -> float | None:
+def _distance_to(restaurant: dict, body: schemas.RecommendIn | schemas.ChatIn) -> float | None:
     """None when either end lacks coordinates — the card then hides distance."""
     if body.latitude is None or body.longitude is None:
         return None

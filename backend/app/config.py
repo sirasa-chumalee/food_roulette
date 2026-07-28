@@ -31,3 +31,25 @@ CORS_ORIGINS = [
     for origin in os.environ.get("FR_CORS_ORIGINS", "*").split(",")
     if origin.strip()
 ]
+
+# --- Gemini (M2 — chat) -----------------------------------------------------
+# No default. An unset key is a normal, supported state: /chat notices it and
+# degrades to the plain recommendation path instead of guessing (ROADMAP §4 M2).
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# Pinned rather than "latest" because a silently-renamed model is a runtime
+# failure with no warning (ROADMAP §6). 2.5 Flash is the model this project
+# uses (DESIGN §0) and the one our key is provisioned for.
+#
+# Worth knowing if you go looking: `client.models.list()` does not return
+# gemini-2.5-flash even though calls to it succeed, so an id missing from that
+# listing is not evidence it's unavailable — try it before replacing it.
+# The Lite tier DESIGN suggested for extraction is retired for new keys, so both
+# steps share the one model.
+GEMINI_EXTRACT_MODEL = os.environ.get("GEMINI_EXTRACT_MODEL", "gemini-2.5-flash")
+GEMINI_NARRATE_MODEL = os.environ.get("GEMINI_NARRATE_MODEL", "gemini-2.5-flash")
+
+# Gemini's own default is generous; chat is user-facing, so we'd rather fall
+# back to the safe recommendation path than leave someone watching a spinner.
+# 10s is the floor the API accepts — anything lower is rejected outright.
+GEMINI_TIMEOUT_MS = int(os.environ.get("GEMINI_TIMEOUT_MS", "15000"))

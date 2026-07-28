@@ -23,6 +23,10 @@ class HardConstraints(BaseModel):
     allergens: list[Allergen] = []
     halal: bool = False
     no_beef: bool = False
+    # Standalone pork avoidance. Halal implies it, but plenty of people skip pork
+    # without keeping halal, and "ไม่เอาหมู" is one of the commonest things a
+    # diner types — it needs somewhere to land that isn't a religious flag.
+    no_pork: bool = False
     vegetarian: bool = False
     vegan: bool = False
     jain: bool = False
@@ -125,3 +129,36 @@ class ErrorBody(BaseModel):
 
 class ErrorEnvelope(BaseModel):
     error: ErrorBody
+
+
+# --- Chat (M2) --------------------------------------------------------------
+# Defined after ErrorCode because ChatOut.degraded reuses it: a Gemini outage is
+# reported inside a normal 200 response, not as a failed request.
+
+
+class ChatIn(BaseModel):
+    user_id: str
+    text: str
+    # Groups one conversation. Omit it on the first message and the server mints
+    # one; send it back on every message after that.
+    session_id: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    limit: int = Field(10, ge=1, le=50)
+    seed: int | None = None
+
+
+class ChatOut(BaseModel):
+    """Same cards as /recommend, plus the prose that introduces them.
+
+    The client renders cards from `recommendations` and never by reading
+    `reply` — that separation is what stops a chatty model from inventing a
+    restaurant (DESIGN §6).
+    """
+
+    reply: str
+    recommendations: list[RecommendedRestaurant]
+    session_id: str
+    # Set when Gemini was skipped or failed. The cards are still real — they
+    # came from the same filter as /recommend — so this is a note, not an error.
+    degraded: ErrorCode | None = None

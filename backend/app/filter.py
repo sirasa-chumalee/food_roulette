@@ -82,6 +82,9 @@ def build_where(hard: HardConstraints) -> tuple[str, tuple]:
     if hard.no_beef:
         clauses.append(_absent("contains_beef"))
 
+    if hard.no_pork:
+        clauses.append(_absent("contains_pork"))
+
     # Independent, not elif: a profile carrying both must satisfy both, even if
     # the source data ever disagrees with itself about vegan implying vegetarian.
     if hard.vegetarian:

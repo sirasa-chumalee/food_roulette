@@ -234,8 +234,128 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /chat:
+    post:
+      summary: Chat
+      description: 'Read the message, filter, then describe what survived (DESIGN
+        §6).
+
+
+        Gemini sits on both ends and never in the middle: it turns the message into
+
+        preferences, and later writes the reply, but the choice of restaurants is
+
+        made by the same filter /recommend uses. If Gemini is unreachable the
+
+        request still succeeds — the user gets their saved-profile recommendations
+
+        and a `degraded` code explaining why the reply is plain.'
+      operationId: chat_chat_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatOut'
+        '422':
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        default:
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   schemas:
+    ChatIn:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        text:
+          type: string
+          title: Text
+        session_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+        latitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitude
+        longitude:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitude
+        limit:
+          type: integer
+          maximum: 50.0
+          minimum: 1.0
+          title: Limit
+          default: 10
+        seed:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Seed
+      type: object
+      required:
+      - user_id
+      - text
+      title: ChatIn
+    ChatOut:
+      properties:
+        reply:
+          type: string
+          title: Reply
+        recommendations:
+          items:
+            $ref: '#/components/schemas/RecommendedRestaurant'
+          type: array
+          title: Recommendations
+        session_id:
+          type: string
+          title: Session Id
+        degraded:
+          anyOf:
+          - type: string
+            enum:
+            - NO_RESULTS
+            - INVALID_PREFS
+            - NOT_FOUND
+            - LLM_UNAVAILABLE
+            - UPSTREAM_TIMEOUT
+            - INTERNAL
+          - type: 'null'
+          title: Degraded
+      type: object
+      required:
+      - reply
+      - recommendations
+      - session_id
+      title: ChatOut
+      description: 'Same cards as /recommend, plus the prose that introduces them.
+
+
+        The client renders cards from `recommendations` and never by reading
+
+        `reply` — that separation is what stops a chatty model from inventing a
+
+        restaurant (DESIGN §6).'
     HTTPValidationError:
       properties:
         detail:
@@ -271,6 +391,10 @@ components:
           type: boolean
           title: No Beef
           default: false
+        no_pork:
+          type: boolean
+          title: No Pork
+          default: false
         vegetarian:
           type: boolean
           title: Vegetarian
@@ -304,6 +428,7 @@ components:
             allergens: []
             halal: false
             no_beef: false
+            no_pork: false
             vegetarian: false
             vegan: false
             jain: false
@@ -325,6 +450,7 @@ components:
             allergens: []
             halal: false
             no_beef: false
+            no_pork: false
             vegetarian: false
             vegan: false
             jain: false
