@@ -170,9 +170,9 @@ the error envelope (§3.2) as exception handlers, and the §3.1 fields the M1 en
 code list — a 404 needed one.
 
 **Frontend**
-- [ ] Replace the counter template in `lib/main.dart`
-- [ ] Add deps: `flutter_riverpod`, `dio` (or `http`), `freezed` + `json_serializable`, `go_router`, `geolocator`
-- [ ] Folder skeleton:
+- [x] Replace the counter template in `lib/main.dart`
+- [x] Add deps: `flutter_riverpod`, `dio` (or `http`), `freezed` + `json_serializable`, `go_router`, `geolocator`
+- [x] Folder skeleton:
   ```
   lib/
     core/          # theme, constants, env (API base url via --dart-define)
@@ -183,8 +183,8 @@ code list — a 404 needed one.
     features/
       profile/ results/ chat/ detail/ history/
   ```
-- [ ] `MockApi` reads `docs/api/fixtures/` (wired in as a Flutter asset dir)
-- [ ] App boots to an empty shell with routing between the 5 feature screens
+- [x] `MockApi` reads `docs/api/fixtures/` (wired in as a Flutter asset dir)
+- [x] App boots to an empty shell with routing between the 5 feature screens
 
 **Checkpoint:** BE serves `/health`; FE app runs on an emulator and renders a stub screen from a fixture.
 **DoD:** a new teammate can clone the repo and get both halves running from the README alone.
@@ -220,12 +220,12 @@ wrong, nothing built on top of it is safe.
       - property test: for every generated constraint set, no returned dish violates it
 
 **Frontend**
-- [ ] Preferences/onboarding screen: hard constraints (allergen multi-select, religion, intolerances)
+- [x] Preferences/onboarding screen: hard constraints (allergen multi-select, religion, intolerances)
       + soft prefs (diet style, spicy, price tier, facilities) → `PUT /preferences`
-- [ ] Results list rendering `recommendation[]` from fixtures
-- [ ] Restaurant card widget incl. **safety badge**, Tier-B caution styling, and the acknowledgement dialog
-- [ ] Fallback banner state + "we filtered out N dishes" affordance
-- [ ] Riverpod: `profileProvider`, `recommendationsProvider` (AsyncNotifier)
+- [x] Results list rendering `recommendation[]` from fixtures
+- [x] Restaurant card widget incl. **safety badge**, Tier-B caution styling, and the acknowledgement dialog
+- [x] Fallback banner state + "we filtered out N dishes" affordance
+- [x] Riverpod: `profileProvider`, `recommendationsProvider` (AsyncNotifier)
 
 **Contract handoff:** BE commits `fixtures/recommend.json` covering **four** cases —
 all-verified, mixed, unverified-only (fallback), and genuinely-empty. FE builds all four states.
