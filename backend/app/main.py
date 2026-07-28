@@ -10,7 +10,6 @@ Run from backend/:
 from __future__ import annotations
 
 import json
-import math
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -22,7 +21,8 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import __version__, config, db, schemas
+from . import __version__, config, db, ranking, schemas
+from . import filter as safety_filter  # `filter` shadows the builtin otherwise
 
 
 @asynccontextmanager
@@ -209,63 +209,10 @@ def get_restaurant(restaurant_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Safety filter: plain Python rules, no AI involved. A dish either follows
-# every rule or it gets dropped. No exceptions, no guessing.
+# Recommendation path. The safety rules themselves live in filter.py and the
+# ordering in ranking.py — this module only moves data between them and the
+# wire. Nothing here may decide whether a dish is safe.
 # ---------------------------------------------------------------------------
-
-# "Shellfish" isn't one thing in the data — it's two columns, crustaceans and
-# molluscs. So one allergen here can mean checking two boxes, not one.
-ALLERGEN_COLUMNS: dict[str, tuple[str, ...]] = {
-    "peanuts": ("peanuts",),
-    "tree_nuts": ("tree_nuts",),
-    "shellfish": ("crustaceans", "molluscs"),
-    "fish": ("fish",),
-    "wheat": ("wheat",),
-    "soy": ("soy",),
-    "milk": ("milk",),
-    "eggs": ("eggs",),
-    "sesame": ("sesame",),
-}
-
-
-def _flag(dish: dict, col: str) -> bool:
-    # Some columns store True/False, others store 1/0. `== 1` treats both the
-    # same way, so this works no matter which one we're reading.
-    return dish.get(col) == 1
-
-
-def _dish_survives(dish: dict, hard: schemas.HardConstraints) -> bool:
-    for allergen in hard.allergens:
-        if any(_flag(dish, col) for col in ALLERGEN_COLUMNS[allergen]):
-            return False
-
-    if hard.halal and (_flag(dish, "contains_pork") or _flag(dish, "contains_alcohol")):
-        # There's no real "halal" switch in the data yet. So we fake one the
-        # simple way: no pork, no alcohol. Close enough for now.
-        return False
-
-    if hard.no_beef and _flag(dish, "contains_beef"):
-        return False
-
-    if hard.vegan and not _flag(dish, "is_vegan"):
-        return False
-    elif hard.vegetarian and not _flag(dish, "is_vegetarian"):
-        return False
-
-    if hard.jain and (not _flag(dish, "is_vegetarian") or _flag(dish, "contains_pungent_veg")):
-        return False
-
-    if hard.celiac and _flag(dish, "wheat"):
-        return False
-
-    return True
-
-
-def _dish_tier(dish: dict) -> str:
-    # "verified" = we trust this dish's allergy info. "unverified" = it passed
-    # the filter but the data behind it is shaky, so we still show the dish —
-    # just with a warning label instead of hiding it.
-    return "verified" if dish.get("confidence") == "high" else "unverified"
 
 
 def _ack_reason(hard: schemas.HardConstraints) -> str:
@@ -278,15 +225,6 @@ def _ack_reason(hard: schemas.HardConstraints) -> str:
     if hard.celiac:
         return "gluten data unverified for these dishes"
     return "dietary data unverified for these dishes"
-
-
-def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    r = 6_371_000.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lon2 - lon1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(a))
 
 
 def _load_preferences(conn, user_id: str) -> tuple[schemas.HardConstraints, schemas.SoftPreferences]:
@@ -365,94 +303,78 @@ def recommend(body: schemas.RecommendIn) -> schemas.RecommendOut:
             raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
         hard, soft = _load_preferences(conn, body.user_id)
 
-        restaurants = [dict(r) for r in conn.execute("SELECT * FROM restaurants;").fetchall()]
-        menu_items = [dict(m) for m in conn.execute("SELECT * FROM menu_items;").fetchall()]
+        # Hard filter first, in SQL. Everything after this line is ordering.
+        surviving = safety_filter.safe_dishes(conn, hard)
+        restaurants = {
+            row["id"]: dict(row) for row in conn.execute("SELECT * FROM restaurants;")
+        }
     finally:
         conn.close()
 
-    dishes_by_restaurant: dict[str, list[dict]] = {}
-    for dish in menu_items:
-        dishes_by_restaurant.setdefault(dish["restaurant_id"], []).append(dish)
-
-    candidates = []
-    for restaurant in restaurants:
-        dishes = dishes_by_restaurant.get(restaurant["id"], [])
-        survivors = [d for d in dishes if _dish_survives(d, hard)]
-        if not survivors:
-            continue  # no safe dish here at all, so skip this restaurant
-
-        verified = [d for d in survivors if _dish_tier(d) == "verified"]
-        unverified = [d for d in survivors if _dish_tier(d) == "unverified"]
-
-        if verified:
-            safe_dishes, safety_tier, needs_ack = verified, "verified", False
-        else:
-            # Nothing verified made it through, but something unverified did.
-            # Show it anyway instead of an empty list — just make the app ask
-            # "are you sure?" before the user picks it.
-            safe_dishes, safety_tier, needs_ack = unverified, "unverified", True
-
-        distance_m = None
-        if body.latitude is not None and body.longitude is not None and restaurant.get("latitude") is not None:
-            distance_m = _haversine_m(body.latitude, body.longitude, restaurant["latitude"], restaurant["longitude"])
-
-        score = 0.0
-        if soft.spicy_tolerance is not None:
-            avg_spice = sum(d.get("spicy_level") or 0 for d in safe_dishes) / len(safe_dishes)
-            score -= abs(avg_spice - soft.spicy_tolerance)
-        if distance_m is not None:
-            score -= distance_m / 1000.0
-        if safety_tier == "verified":
-            score += 10.0  # trusted restaurants jump ahead of "please confirm" ones
-
-        candidates.append(
-            {
-                "restaurant": restaurant,
-                "safe_dishes": safe_dishes,
-                "safety_tier": safety_tier,
-                "needs_ack": needs_ack,
-                "excluded_count": len(dishes) - len(survivors),
-                "distance_m": distance_m,
-                "score": score,
-            }
+    candidates = [
+        ranking.Candidate(
+            restaurant=restaurants[dishes.restaurant_id],
+            dishes=dishes,
+            distance_m=_distance_to(restaurants[dishes.restaurant_id], body),
         )
-
-    candidates.sort(key=lambda c: c["score"], reverse=True)
-    top = candidates[: body.limit]
-
-    # True only if EVERY restaurant we're returning is unverified — that's the
-    # signal for the app to show a "please double-check these" banner.
-    fallback_used = bool(top) and all(c["safety_tier"] == "unverified" for c in top)
-
-    recommendations = [
-        schemas.RecommendedRestaurant(
-            restaurant_id=c["restaurant"]["id"],
-            name_th=c["restaurant"].get("name_th"),
-            name_en=c["restaurant"].get("name_en"),
-            latitude=c["restaurant"].get("latitude"),
-            longitude=c["restaurant"].get("longitude"),
-            distance_m=c["distance_m"],
-            price_tier=c["restaurant"].get("price_band"),
-            # rating / photo_url stay null until M4 (Places).
-            rating=None,
-            photo_url=None,
-            safety_tier=c["safety_tier"],
-            needs_ack=c["needs_ack"],
-            ack_reason=_ack_reason(hard) if c["needs_ack"] else None,
-            excluded_count=c["excluded_count"],
-            safe_dishes=[
-                schemas.SafeDish(
-                    id=d["id"],
-                    name_th=d.get("name_th"),
-                    name_en=d.get("name_en"),
-                    price_thb=d.get("price_thb"),
-                    spicy_level=d.get("spicy_level"),
-                    safety_tier=_dish_tier(d),
-                )
-                for d in c["safe_dishes"]
-            ],
-        )
-        for c in top
+        for dishes in surviving
+        if dishes.restaurant_id in restaurants
     ]
 
-    return schemas.RecommendOut(recommendations=recommendations, fallback_used=fallback_used)
+    ranked = ranking.rank(candidates, soft, seed=body.seed)
+
+    # Computed over the whole safe set, not the truncated page: the banner asks
+    # "did anything verified survive the filter?", which `limit` can't change.
+    fallback = safety_filter.fallback_used(surviving)
+
+    return schemas.RecommendOut(
+        recommendations=[_to_card(c, hard) for c in ranked[: body.limit]],
+        fallback_used=fallback,
+    )
+
+
+def _distance_to(restaurant: dict, body: schemas.RecommendIn) -> float | None:
+    """None when either end lacks coordinates — the card then hides distance."""
+    if body.latitude is None or body.longitude is None:
+        return None
+    if restaurant.get("latitude") is None or restaurant.get("longitude") is None:
+        return None
+    return ranking.haversine_m(
+        body.latitude, body.longitude, restaurant["latitude"], restaurant["longitude"]
+    )
+
+
+def _to_card(
+    candidate: ranking.Candidate, hard: schemas.HardConstraints
+) -> schemas.RecommendedRestaurant:
+    """Shape one ranked candidate into the wire object (ROADMAP §3.1)."""
+    restaurant = candidate.restaurant
+    dishes = candidate.dishes
+
+    return schemas.RecommendedRestaurant(
+        restaurant_id=restaurant["id"],
+        name_th=restaurant.get("name_th"),
+        name_en=restaurant.get("name_en"),
+        latitude=restaurant.get("latitude"),
+        longitude=restaurant.get("longitude"),
+        distance_m=candidate.distance_m,
+        price_tier=restaurant.get("price_band"),
+        # rating / photo_url stay null until M4 (Places).
+        rating=None,
+        photo_url=None,
+        safety_tier=dishes.safety_tier,
+        needs_ack=dishes.needs_ack,
+        ack_reason=_ack_reason(hard) if dishes.needs_ack else None,
+        excluded_count=dishes.excluded_count,
+        safe_dishes=[
+            schemas.SafeDish(
+                id=d["id"],
+                name_th=d.get("name_th"),
+                name_en=d.get("name_en"),
+                price_thb=d.get("price_thb"),
+                spicy_level=d.get("spicy_level"),
+                safety_tier=safety_filter.tier_of(d),
+            )
+            for d in dishes.offered_dishes
+        ],
+    )

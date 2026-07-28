@@ -17,12 +17,16 @@ Allergen = Literal[
 
 
 class HardConstraints(BaseModel):
+    """Non-negotiable rules. Every one of these is enforced in SQL by
+    `filter.py` — the LLM never gets a say (DESIGN §4)."""
+
     allergens: list[Allergen] = []
     halal: bool = False
     no_beef: bool = False
     vegetarian: bool = False
     vegan: bool = False
     jain: bool = False
+    jay: bool = False  # Thai เจ: vegan + no pungent vegetables
     celiac: bool = False
 
 
@@ -57,6 +61,9 @@ class RecommendIn(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     limit: int = Field(10, ge=1, le=50)
+    # Fixes the random tiebreak so an ordering can be replayed — M5's roulette
+    # needs a spin to be reproducible. Omit it for a fresh shuffle each call.
+    seed: int | None = None
 
 
 class SafeDish(BaseModel):

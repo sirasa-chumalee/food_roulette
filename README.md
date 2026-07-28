@@ -72,6 +72,7 @@ Expected output:
 Ingested into .../backend/food_roulette.db
   restaurants : 50
   menu_items  : 1250
+  price bands : 50 derived from menu medians
   FK integrity: OK (no orphan menu_items)
 ```
 
@@ -187,8 +188,9 @@ FR_DB_PATH=/tmp/fr.db python -m app.ingest
 Two normalized tables joined by `restaurant_id` (full DDL in `backend/schema.sql`):
 
 - **`restaurants`** — one row per venue: `id`, `google_place_id`, `name_th`,
-  `latitude`/`longitude`, plus placeholders to be enriched later (`price_band`,
-  `is_halal_certified`, `has_parking`) and cached Google Places fields.
+  `latitude`/`longitude`, `price_band` (derived at ingest from the menu's median
+  price), placeholders still to be enriched (`is_halal_certified`, `has_parking`)
+  and cached Google Places fields.
 - **`menu_items`** — 25 per restaurant: name, price, `spicy_level`, raw allergen &
   dietary flags, a `confidence` field, and pre-derived diet booleans
   (`is_vegetarian`, `is_vegan`, `is_pescatarian`, `is_jay`).

@@ -1,13 +1,54 @@
 {
   "recommendations": [
     {
-      "restaurant_id": "tu_place_26",
-      "name_th": "โคตรเล้ง กะเพราเทวดา",
+      "restaurant_id": "tu_place_50",
+      "name_th": "S.O.L.A.R Café",
       "name_en": null,
-      "latitude": 14.0660676,
-      "longitude": 100.6063461,
-      "distance_m": 505.20617641308803,
-      "price_tier": null,
+      "latitude": 14.0697039,
+      "longitude": 100.6013648,
+      "distance_m": 286.1308908870083,
+      "price_tier": "$$",
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 11,
+      "safe_dishes": [
+        {
+          "id": 1228,
+          "name_th": "ข้าวกะเพราไก่",
+          "name_en": null,
+          "price_thb": 89.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 1240,
+          "name_th": "สปาเก็ตตี้ซอสมะเขือเทศ",
+          "name_en": null,
+          "price_thb": 139.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 1243,
+          "name_th": "ซีซาร์สลัด",
+          "name_en": null,
+          "price_thb": 139.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_41",
+      "name_th": "ออนเซ็น (กรีนแคนทีน) เอ็กซ์เพรส",
+      "name_en": null,
+      "latitude": 14.0733468,
+      "longitude": 100.6011404,
+      "distance_m": 483.3460908555433,
+      "price_tier": "$$",
       "rating": null,
       "photo_url": null,
       "safety_tier": "verified",
@@ -16,108 +57,67 @@
       "excluded_count": 13,
       "safe_dishes": [
         {
-          "id": 641,
-          "name_th": "เล้งธรรมดา",
+          "id": 1006,
+          "name_th": "ข้าวสไปซี่ดงบุริไข่ข้น",
           "name_en": null,
-          "price_thb": 60.0,
+          "price_thb": 99.0,
           "spicy_level": 2,
           "safety_tier": "verified"
         },
         {
-          "id": 642,
-          "name_th": "โคตรเล้ง",
+          "id": 1012,
+          "name_th": "ราเมนเกี๊ยวซ่า",
           "name_en": null,
-          "price_thb": 150.0,
-          "spicy_level": 3,
+          "price_thb": 89.0,
+          "spicy_level": 0,
           "safety_tier": "verified"
         },
         {
-          "id": 643,
-          "name_th": "เล้ง!!! โคตรเถื่อน",
+          "id": 1015,
+          "name_th": "เฟรนฟรายชีส",
           "name_en": null,
-          "price_thb": 290.0,
-          "spicy_level": 3,
+          "price_thb": 79.0,
+          "spicy_level": 0,
           "safety_tier": "verified"
         }
       ]
     },
     {
-      "restaurant_id": "tu_place_24",
-      "name_th": "Sister",
+      "restaurant_id": "tu_place_48",
+      "name_th": "SteakHolder",
       "name_en": null,
-      "latitude": 14.066322,
-      "longitude": 100.6065309,
-      "distance_m": 491.71128819799554,
-      "price_tier": null,
+      "latitude": 14.0673388,
+      "longitude": 100.6085285,
+      "distance_m": 571.0865541781991,
+      "price_tier": "$$",
       "rating": null,
       "photo_url": null,
       "safety_tier": "verified",
       "needs_ack": false,
       "ack_reason": null,
-      "excluded_count": 17,
+      "excluded_count": 2,
       "safe_dishes": [
         {
-          "id": 578,
-          "name_th": "ข้าวปลากรอบผัดพริกเกลือ",
+          "id": 1178,
+          "name_th": "Sirloin Steak",
           "name_en": null,
-          "price_thb": 50.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 581,
-          "name_th": "ข้าวยำปลาดุกฟู",
-          "name_en": null,
-          "price_thb": 50.0,
+          "price_thb": 329.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         },
         {
-          "id": 588,
-          "name_th": "ต้มแซ่บกระดูกอ่อน",
+          "id": 1179,
+          "name_th": "Striploin Steak",
           "name_en": null,
-          "price_thb": 80.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        }
-      ]
-    },
-    {
-      "restaurant_id": "tu_place_27",
-      "name_th": "Tomorrow Expires",
-      "name_en": null,
-      "latitude": 14.0656233,
-      "longitude": 100.6088133,
-      "distance_m": 711.6000235403731,
-      "price_tier": null,
-      "rating": null,
-      "photo_url": null,
-      "safety_tier": "verified",
-      "needs_ack": false,
-      "ack_reason": null,
-      "excluded_count": 0,
-      "safe_dishes": [
-        {
-          "id": 662,
-          "name_th": "คั่วไก่ไข่ออนเซ็น",
-          "name_en": null,
-          "price_thb": 79.0,
+          "price_thb": 349.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         },
         {
-          "id": 663,
-          "name_th": "สเต็กไก่สไปซี่",
+          "id": 1181,
+          "name_th": "สเต๊กอกไก่",
           "name_en": null,
-          "price_thb": 79.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 664,
-          "name_th": "สเต็กไก่สมุนไพร",
-          "name_en": null,
-          "price_thb": 79.0,
+          "price_thb": 159.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         }

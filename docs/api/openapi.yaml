@@ -283,12 +283,19 @@ components:
           type: boolean
           title: Jain
           default: false
+        jay:
+          type: boolean
+          title: Jay
+          default: false
         celiac:
           type: boolean
           title: Celiac
           default: false
       type: object
       title: HardConstraints
+      description: 'Non-negotiable rules. Every one of these is enforced in SQL by
+
+        `filter.py` — the LLM never gets a say (DESIGN §4).'
     PreferencesIn:
       properties:
         hard:
@@ -300,6 +307,7 @@ components:
             vegetarian: false
             vegan: false
             jain: false
+            jay: false
             celiac: false
         soft:
           $ref: '#/components/schemas/SoftPreferences'
@@ -320,6 +328,7 @@ components:
             vegetarian: false
             vegan: false
             jain: false
+            jay: false
             celiac: false
         soft:
           $ref: '#/components/schemas/SoftPreferences'
@@ -355,6 +364,11 @@ components:
           minimum: 1.0
           title: Limit
           default: 10
+        seed:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Seed
       type: object
       required:
       - user_id

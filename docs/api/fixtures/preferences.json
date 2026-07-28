@@ -9,6 +9,7 @@
     "vegetarian": false,
     "vegan": false,
     "jain": false,
+    "jay": false,
     "celiac": false
   },
   "soft": {
@@ -17,5 +18,5 @@
     "diet_style": "none",
     "wants_parking": false
   },
-  "user_id": "019b72f640f847ba907a31ee8f16945f"
+  "user_id": "177c8bc8b1de40a29338471fdac42014"
 }

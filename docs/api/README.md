@@ -67,10 +67,17 @@ is the graceful floor, not the norm.
 
 - `rating` and `photo_url` are `null` until M4 (Google Places). Render a
   placeholder — don't hide the card.
-- `price_tier` is `null` until M1 derives it from menu prices.
+- `price_tier` is now populated (`$`…`$$$$`, derived at ingest from each menu's
+  median price). It can still be `null` for a venue with no priced dish — show
+  "unknown", not "cheap".
 - `distance_m` is present whenever the request carried `latitude`/`longitude`.
 - `needs_ack: true` always comes with a non-null `ack_reason` — show it verbatim
   in the confirmation dialog.
+- `POST /recommend` takes an optional `seed`. Same seed + same profile ⇒ same
+  order, which is what makes an M5 roulette spin replayable. Omit it and ties
+  reshuffle on every call.
+- `hard.jay` (Thai เจ: vegan + no pungent vegetables) sits alongside `hard.jain`
+  (vegetarian + no pungent vegetables). They are different constraints.
 - Errors always arrive as `{"error": {code, message, detail}}`. `message` is safe
   to display; `detail` is for logs only.
 - Error codes: `NO_RESULTS`, `INVALID_PREFS`, `NOT_FOUND`, `LLM_UNAVAILABLE`,

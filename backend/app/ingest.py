@@ -22,7 +22,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from . import config, db
+from . import config, db, pricing
 
 # Column order used for the INSERT statements. Kept explicit so a change to the
 # JSON key order never silently shifts values into the wrong column.
@@ -120,6 +120,10 @@ def ingest(conn: sqlite3.Connection, data_dir: Path) -> dict:
     )
     conn.commit()
 
+    # `price_band` arrives NULL for all 50 rows, so we derive it here — offline,
+    # from the menu we just loaded, rather than at request time (DESIGN §7).
+    priced = pricing.derive_price_bands(conn)
+
     # Integrity check: no menu row should reference a missing restaurant.
     orphans = conn.execute(
         "SELECT COUNT(*) FROM menu_items m "
@@ -131,6 +135,7 @@ def ingest(conn: sqlite3.Connection, data_dir: Path) -> dict:
         "restaurants": conn.execute("SELECT COUNT(*) FROM restaurants;").fetchone()[0],
         "menu_items": conn.execute("SELECT COUNT(*) FROM menu_items;").fetchone()[0],
         "orphan_menu_items": orphans,
+        "price_bands_derived": priced,
     }
 
 
@@ -154,6 +159,7 @@ def main() -> None:
     print(f"Ingested into {args.db}")
     print(f"  restaurants : {summary['restaurants']}")
     print(f"  menu_items  : {summary['menu_items']}")
+    print(f"  price bands : {summary['price_bands_derived']} derived from menu medians")
     if summary["orphan_menu_items"]:
         raise SystemExit(
             f"  ERROR: {summary['orphan_menu_items']} menu_items reference a "
