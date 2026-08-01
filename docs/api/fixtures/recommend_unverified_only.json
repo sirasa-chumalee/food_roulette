@@ -1,6 +1,47 @@
 {
   "recommendations": [
     {
+      "restaurant_id": "tu_place_26",
+      "name_th": "โคตรเล้ง กะเพราเทวดา",
+      "name_en": null,
+      "latitude": 14.0660676,
+      "longitude": 100.6063461,
+      "distance_m": 505.20617641308803,
+      "price_tier": "$",
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "unverified",
+      "needs_ack": true,
+      "ack_reason": "dietary data unverified for these dishes",
+      "excluded_count": 19,
+      "safe_dishes": [
+        {
+          "id": 633,
+          "name_th": "ข้าวราดกะเพรารวมมิตร",
+          "name_en": null,
+          "price_thb": 60.0,
+          "spicy_level": 2,
+          "safety_tier": "unverified"
+        },
+        {
+          "id": 635,
+          "name_th": "ข้าวราดกะเพราไข่เยี่ยวม้า",
+          "name_en": null,
+          "price_thb": 60.0,
+          "spicy_level": 2,
+          "safety_tier": "unverified"
+        },
+        {
+          "id": 638,
+          "name_th": "กะเพราถาด 3 คน (รวมมิตร)",
+          "name_en": null,
+          "price_thb": 200.0,
+          "spicy_level": 2,
+          "safety_tier": "unverified"
+        }
+      ]
+    },
+    {
       "restaurant_id": "tu_place_16",
       "name_th": "เจริญเจริญอาหารตามสั่ง ม.ธรรมศาสตร์รังสิต",
       "name_en": null,

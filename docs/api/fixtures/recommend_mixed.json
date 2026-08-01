@@ -1,47 +1,6 @@
 {
   "recommendations": [
     {
-      "restaurant_id": "tu_place_26",
-      "name_th": "โคตรเล้ง กะเพราเทวดา",
-      "name_en": null,
-      "latitude": 14.0660676,
-      "longitude": 100.6063461,
-      "distance_m": 505.20617641308803,
-      "price_tier": "$",
-      "rating": null,
-      "photo_url": null,
-      "safety_tier": "verified",
-      "needs_ack": false,
-      "ack_reason": null,
-      "excluded_count": 16,
-      "safe_dishes": [
-        {
-          "id": 641,
-          "name_th": "เล้งธรรมดา",
-          "name_en": null,
-          "price_thb": 60.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 642,
-          "name_th": "โคตรเล้ง",
-          "name_en": null,
-          "price_thb": 150.0,
-          "spicy_level": 3,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 643,
-          "name_th": "เล้ง!!! โคตรเถื่อน",
-          "name_en": null,
-          "price_thb": 290.0,
-          "spicy_level": 3,
-          "safety_tier": "verified"
-        }
-      ]
-    },
-    {
       "restaurant_id": "tu_place_2",
       "name_th": "ครัวแม่หมู มธ.",
       "name_en": null,
@@ -83,26 +42,83 @@
       ]
     },
     {
-      "restaurant_id": "tu_place_16",
-      "name_th": "เจริญเจริญอาหารตามสั่ง ม.ธรรมศาสตร์รังสิต",
+      "restaurant_id": "tu_place_41",
+      "name_th": "ออนเซ็น (กรีนแคนทีน) เอ็กซ์เพรส",
       "name_en": null,
-      "latitude": 14.0660059,
-      "longitude": 100.610379,
-      "distance_m": 818.9279831132177,
+      "latitude": 14.0733468,
+      "longitude": 100.6011404,
+      "distance_m": 483.3460908555433,
+      "price_tier": "$$",
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 15,
+      "safe_dishes": [
+        {
+          "id": 1006,
+          "name_th": "ข้าวสไปซี่ดงบุริไข่ข้น",
+          "name_en": null,
+          "price_thb": 99.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 1012,
+          "name_th": "ราเมนเกี๊ยวซ่า",
+          "name_en": null,
+          "price_thb": 89.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 1015,
+          "name_th": "เฟรนฟรายชีส",
+          "name_en": null,
+          "price_thb": 79.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_26",
+      "name_th": "โคตรเล้ง กะเพราเทวดา",
+      "name_en": null,
+      "latitude": 14.0660676,
+      "longitude": 100.6063461,
+      "distance_m": 505.20617641308803,
       "price_tier": "$",
       "rating": null,
       "photo_url": null,
       "safety_tier": "unverified",
       "needs_ack": true,
       "ack_reason": "dietary data unverified for these dishes",
-      "excluded_count": 24,
+      "excluded_count": 19,
       "safe_dishes": [
         {
-          "id": 377,
-          "name_th": "ข้าวกะเพราไข่เยี่ยวม้า",
+          "id": 633,
+          "name_th": "ข้าวราดกะเพรารวมมิตร",
           "name_en": null,
-          "price_thb": 50.0,
-          "spicy_level": 0,
+          "price_thb": 60.0,
+          "spicy_level": 2,
+          "safety_tier": "unverified"
+        },
+        {
+          "id": 635,
+          "name_th": "ข้าวราดกะเพราไข่เยี่ยวม้า",
+          "name_en": null,
+          "price_thb": 60.0,
+          "spicy_level": 2,
+          "safety_tier": "unverified"
+        },
+        {
+          "id": 638,
+          "name_th": "กะเพราถาด 3 คน (รวมมิตร)",
+          "name_en": null,
+          "price_thb": 200.0,
+          "spicy_level": 2,
           "safety_tier": "unverified"
         }
       ]

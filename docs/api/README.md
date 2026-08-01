@@ -35,7 +35,7 @@ silently breaking the frontend's mocks.
 | `health.json` | `GET /health` | real response |
 | `auth_session.json` | `POST /auth/session` | real response |
 | `preferences.json` | `PUT /users/{id}/preferences` | real response |
-| `recommend_all_verified.json` | `POST /recommend` | real — peanut + shellfish allergy, halal |
+| `recommend_all_verified.json` | `POST /recommend` | real — peanut + shellfish allergy, halal; the one Tier-B venue of the 50 is selected out |
 | `recommend_mixed.json` | `POST /recommend` | real — Jain profile, cards selected to show both tiers |
 | `recommend_unverified_only.json` | `POST /recommend` | **synthesised** (see below); the cards inside are real |
 | `recommend_empty.json` | `POST /recommend` | **synthesised** (see below) |
@@ -105,11 +105,12 @@ grounding check the server applies at runtime.
   (`chat_degraded.json`). `/chat` only 4xx-s for a bad request or unknown user.
 - `session_id`: omit it on the first message, then send back what you were given.
   It groups a conversation and is what M3's history events will hang off.
-- Heads-up on the data, not the API: some source rows are mislabelled — e.g.
-  `เล้งธรรมดา` and `Beef Burger` carry `contains_pork: 0` / `is_vegan: true` at
-  `confidence: "high"` (8 dishes found by a name-vs-flag scan). `chat_with_cards.json`
-  shows one. The filter is behaving correctly; the input is wrong. Don't file it as
-  a filter bug — it's tracked as a data risk in `ROADMAP` §6.
+- Heads-up on the data, not the API: a few source rows still contradict their own
+  names. `bb254df` fixed 19 of them (the fixtures were regenerated on top of it), but
+  `ต้มแซ่บกระดูกอ่อน` is still `is_vegan: true` / `is_jay: true` at
+  `confidence: "high"`, so a vegan profile can surface it with a *verified* badge.
+  The filter is behaving correctly; the input is wrong. Don't file it as a filter
+  bug — it's tracked as a data risk in `ROADMAP` §6.
 - Errors always arrive as `{"error": {code, message, detail}}`. `message` is safe
   to display; `detail` is for logs only.
 - Error codes: `NO_RESULTS`, `INVALID_PREFS`, `NOT_FOUND`, `LLM_UNAVAILABLE`,

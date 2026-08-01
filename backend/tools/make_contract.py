@@ -90,17 +90,28 @@ def build_fixtures(client: TestClient) -> None:
     )
 
     # --- Case 1: all verified -------------------------------------------------
-    # A peanut + shellfish allergy with halal still leaves every restaurant with
-    # high-confidence safe dishes — this is the normal, happy path.
-    all_verified = client.post(
+    # A peanut + shellfish allergy with halal: 49 of 50 restaurants still have
+    # high-confidence safe dishes — the normal, happy path.
+    #
+    # The 50th is selected out rather than asserted away. Since the 2026-08-01
+    # data fix, โคตรเล้ง's pork dishes are correctly labelled, so halal removes
+    # all of its high-confidence ones and it comes back Tier B. That's the filter
+    # working; it just isn't what *this* fixture is here to show.
+    all_verified_full = client.post(
         "/recommend", json={"user_id": user_id, "limit": 50, **TU_RANGSIT}
     ).json()
-    assert all(c["safety_tier"] == "verified" for c in all_verified["recommendations"])
+    all_verified_cards = [
+        c for c in all_verified_full["recommendations"] if c["safety_tier"] == "verified"
+    ]
+    assert all_verified_cards, "expected some verified cards for a peanut/shellfish/halal profile"
+
+    all_verified = dict(all_verified_full)
+    all_verified["recommendations"] = all_verified_cards
     write_json("recommend_all_verified.json", trim(all_verified))
 
     # --- Case 2: mixed --------------------------------------------------------
-    # Jain is the one real constraint in this dataset that leaves a restaurant
-    # with only low-confidence dishes, so the response carries both tiers.
+    # Jain leaves a restaurant with only low-confidence dishes, so the response
+    # carries both tiers.
     client.put(f"/users/{user_id}/preferences", json={"hard": {"jain": True}, "soft": {}})
     mixed_full = client.post(
         "/recommend", json={"user_id": user_id, "limit": 50, **TU_RANGSIT}
