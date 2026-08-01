@@ -384,7 +384,10 @@ def chat(body: schemas.ChatIn) -> schemas.ChatOut:
         except llm_extract.ExtractUnavailable:
             degraded = "LLM_UNAVAILABLE"
 
-        recommendations, _ = _recommend_for(conn, body, hard, soft)
+        recommendations, fallback = _recommend_for(conn, body, hard, soft)
+        # Read while the connection is open: the grounding check below needs to
+        # know which real venues we chose *not* to return.
+        unreturned_names = _unreturned_restaurant_names(conn, recommendations)
     finally:
         conn.close()
 
@@ -401,13 +404,34 @@ def chat(body: schemas.ChatIn) -> schemas.ChatOut:
             # The suggestions are still sound; only the wording was lost, and
             # the client deserves to know the prose is canned.
             reply, degraded = DEGRADED_REPLY, "LLM_UNAVAILABLE"
+        else:
+            if llm_narrate.ungrounded_mentions(reply, recommendations, unreturned_names):
+                # The reply pointed at a restaurant that isn't in the response —
+                # possibly one the safety filter threw out. Drop the prose; the
+                # cards were never at risk. Reported as LLM_UNAVAILABLE because
+                # from the client's side that is exactly what happened: no usable
+                # reply came back, fall through to the plain results treatment.
+                reply, degraded = DEGRADED_REPLY, "LLM_UNAVAILABLE"
 
     return schemas.ChatOut(
         reply=reply,
         recommendations=recommendations,
         session_id=session_id,
+        fallback_used=fallback,
         degraded=degraded,
     )
+
+
+def _unreturned_restaurant_names(
+    conn, recommendations: list[schemas.RecommendedRestaurant]
+) -> list[str]:
+    """Real venues that aren't in this response — what a reply must not name."""
+    returned = {card.restaurant_id for card in recommendations}
+    return [
+        row["name_th"]
+        for row in conn.execute("SELECT id, name_th FROM restaurants;")
+        if row["id"] not in returned and row["name_th"]
+    ]
 
 
 def _distance_to(restaurant: dict, body: schemas.RecommendIn | schemas.ChatIn) -> float | None:

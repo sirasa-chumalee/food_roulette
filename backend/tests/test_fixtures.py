@@ -24,6 +24,12 @@ RECOMMEND_FIXTURES = [
     "recommend_empty.json",
 ]
 
+CHAT_FIXTURES = [
+    "chat_with_cards.json",
+    "chat_no_cards.json",
+    "chat_degraded.json",
+]
+
 
 def load(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
@@ -54,6 +60,33 @@ def test_the_four_recommend_cases_are_all_covered():
     assert empty.recommendations == []
 
 
+@pytest.mark.parametrize("name", CHAT_FIXTURES)
+def test_chat_fixture_matches_the_model(name):
+    schemas.ChatOut.model_validate(load(name))
+
+
+def test_the_three_chat_cases_are_all_covered():
+    """ROADMAP M2 promises FE cards, no cards, and a Gemini outage."""
+    with_cards = schemas.ChatOut.model_validate(load("chat_with_cards.json"))
+    no_cards = schemas.ChatOut.model_validate(load("chat_no_cards.json"))
+    degraded = schemas.ChatOut.model_validate(load("chat_degraded.json"))
+
+    assert with_cards.recommendations and with_cards.degraded is None
+    assert no_cards.recommendations == []
+    # The outage case still carries cards — that's the whole point of it.
+    assert degraded.degraded == "LLM_UNAVAILABLE"
+    assert degraded.recommendations
+
+
+def test_the_chat_fixture_reply_stays_grounded():
+    """The fixture FE builds its chat bubble from must itself obey the guardrail:
+    no restaurant named in `reply` that isn't in `recommendations`."""
+    from app.llm import narrate
+
+    with_cards = schemas.ChatOut.model_validate(load("chat_with_cards.json"))
+    assert narrate.ungrounded_mentions(with_cards.reply, with_cards.recommendations) == []
+
+
 @pytest.mark.parametrize("name", ["error_not_found.json", "error_invalid_prefs.json"])
 def test_error_fixtures_match_the_envelope(name):
     schemas.ErrorEnvelope.model_validate(load(name))
@@ -67,7 +100,7 @@ def test_other_fixtures_match_their_models():
 
 def test_every_fixture_file_is_covered_by_this_suite():
     """A new fixture must be asserted on, not just dropped in the folder."""
-    known = set(RECOMMEND_FIXTURES) | {
+    known = set(RECOMMEND_FIXTURES) | set(CHAT_FIXTURES) | {
         "auth_session.json",
         "preferences.json",
         "health.json",

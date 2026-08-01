@@ -1,0 +1,131 @@
+{
+  "reply": "Here's what fits your saved preferences.",
+  "recommendations": [
+    {
+      "restaurant_id": "tu_place_26",
+      "name_th": "โคตรเล้ง กะเพราเทวดา",
+      "name_en": null,
+      "latitude": 14.0660676,
+      "longitude": 100.6063461,
+      "distance_m": 505.20617641308803,
+      "price_tier": "$",
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 0,
+      "safe_dishes": [
+        {
+          "id": 641,
+          "name_th": "เล้งธรรมดา",
+          "name_en": null,
+          "price_thb": 60.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 642,
+          "name_th": "โคตรเล้ง",
+          "name_en": null,
+          "price_thb": 150.0,
+          "spicy_level": 3,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 643,
+          "name_th": "เล้ง!!! โคตรเถื่อน",
+          "name_en": null,
+          "price_thb": 290.0,
+          "spicy_level": 3,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_9",
+      "name_th": "ครัวปากแดง",
+      "name_en": null,
+      "latitude": 14.0651739,
+      "longitude": 100.6032132,
+      "distance_m": 543.306660854303,
+      "price_tier": "$",
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 0,
+      "safe_dishes": [
+        {
+          "id": 201,
+          "name_th": "ข้าวยำไก่แซ่บ",
+          "name_en": null,
+          "price_thb": 40.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 203,
+          "name_th": "ข้าวผัดกุนเชียง",
+          "name_en": null,
+          "price_thb": 40.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 205,
+          "name_th": "ข้าวหมึกพริกไทยดำ",
+          "name_en": null,
+          "price_thb": 50.0,
+          "spicy_level": 1,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_4",
+      "name_th": "ป้านางลาบอุดร",
+      "name_en": null,
+      "latitude": 14.0650467,
+      "longitude": 100.6073289,
+      "distance_m": 657.4813075628358,
+      "price_tier": "$$",
+      "rating": null,
+      "photo_url": null,
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 4,
+      "safe_dishes": [
+        {
+          "id": 76,
+          "name_th": "จิ้มจุ่มรวม",
+          "name_en": null,
+          "price_thb": 250.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 77,
+          "name_th": "ต้มแซ่บกระดูกอ่อน",
+          "name_en": null,
+          "price_thb": 100.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 78,
+          "name_th": "น้ำตกหมู",
+          "name_en": null,
+          "price_thb": 100.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        }
+      ]
+    }
+  ],
+  "session_id": "ff5381e6302a4cd28e1409803680ddc2",
+  "fallback_used": false,
+  "degraded": "LLM_UNAVAILABLE"
+}

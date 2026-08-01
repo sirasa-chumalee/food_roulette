@@ -6,6 +6,7 @@
     ],
     "halal": true,
     "no_beef": false,
+    "no_pork": false,
     "vegetarian": false,
     "vegan": false,
     "jain": false,
@@ -18,5 +19,5 @@
     "diet_style": "none",
     "wants_parking": false
   },
-  "user_id": "177c8bc8b1de40a29338471fdac42014"
+  "user_id": "64aef1e6437749aba5a7d7163785bca9"
 }

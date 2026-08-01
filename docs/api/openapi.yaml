@@ -330,6 +330,10 @@ components:
         session_id:
           type: string
           title: Session Id
+        fallback_used:
+          type: boolean
+          title: Fallback Used
+          default: false
         degraded:
           anyOf:
           - type: string

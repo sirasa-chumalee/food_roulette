@@ -9,6 +9,8 @@ cards from `recommendations[]` instead of parsing them out of `reply`.
 """
 from __future__ import annotations
 
+import re
+
 from .. import config, schemas
 from .extract import ExtractTimeout, ExtractUnavailable, _looks_like_timeout
 
@@ -76,3 +78,54 @@ def narrate(user_text: str, recommendations: list[schemas.RecommendedRestaurant]
     if not response.text:
         raise ExtractUnavailable("Gemini returned an empty reply")
     return response.text.strip()
+
+
+# Restaurant ids in this dataset all look like `tu_place_12`. A reply has no
+# reason to contain one at all, but if it does it must be one we returned.
+_ID_PATTERN = re.compile(r"\btu_place_\d+\b")
+
+# Below this, a "name" is too short to match on without tripping over ordinary
+# words — an exclusion this narrow costs nothing and avoids false alarms.
+_MIN_NAME_LEN = 3
+
+
+def ungrounded_mentions(
+    reply: str,
+    recommendations: list[schemas.RecommendedRestaurant],
+    other_names: list[str] | None = None,
+) -> list[str]:
+    """Restaurants the reply names that aren't in `recommendations`.
+
+    Two things are checkable without guessing: a restaurant **id** that isn't in
+    the response, and the **name** of a real restaurant we deliberately didn't
+    return (`other_names`, i.e. one the filter or the ranking dropped). Both mean
+    the prose is pointing somewhere the cards don't go.
+
+    A name invented from nothing is not detectable here, and doesn't need to be:
+    the client renders cards from `recommendations`, never from `reply`
+    (DESIGN §6). This function catches the case that *would* mislead — the model
+    steering someone toward a venue the safety filter already rejected.
+    """
+    returned_ids = {card.restaurant_id for card in recommendations}
+    returned_names = [
+        name
+        for card in recommendations
+        for name in (card.name_th, card.name_en)
+        if name
+    ]
+
+    offenders = [
+        found for found in _ID_PATTERN.findall(reply) if found not in returned_ids
+    ]
+
+    for name in other_names or []:
+        if len(name) < _MIN_NAME_LEN or name not in reply:
+            continue
+        # "CO" is a whole restaurant here and also sits inside "CO Coffee &
+        # Restaurant". If the match is only there because it's part of a name we
+        # *did* return, the reply never left the list.
+        if any(name in returned for returned in returned_names):
+            continue
+        offenders.append(name)
+
+    return offenders

@@ -159,6 +159,10 @@ class ChatOut(BaseModel):
     reply: str
     recommendations: list[RecommendedRestaurant]
     session_id: str
-    # Set when Gemini was skipped or failed. The cards are still real — they
-    # came from the same filter as /recommend — so this is a note, not an error.
+    # Same meaning as on RecommendOut: we found something, but nothing verified.
+    # Chat renders the identical caution banner, so it needs the identical flag.
+    fallback_used: bool = False
+    # Set when Gemini was skipped, failed, or wrote something we couldn't ground.
+    # The cards are still real — they came from the same filter as /recommend —
+    # so this is a note, not an error.
     degraded: ErrorCode | None = None

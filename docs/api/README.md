@@ -39,6 +39,9 @@ silently breaking the frontend's mocks.
 | `recommend_mixed.json` | `POST /recommend` | real — Jain profile, cards selected to show both tiers |
 | `recommend_unverified_only.json` | `POST /recommend` | **synthesised** (see below); the cards inside are real |
 | `recommend_empty.json` | `POST /recommend` | **synthesised** (see below) |
+| `chat_with_cards.json` | `POST /chat` | real — "อยากกินอะไรเผ็ดๆ ไม่เอาหมู", canned Gemini answers (see below) |
+| `chat_no_cards.json` | `POST /chat` | **synthesised** — same reason as `recommend_empty.json`; the reply is the server's real constant |
+| `chat_degraded.json` | `POST /chat` | real — the Gemini-outage path, byte-for-byte what a keyless deployment returns |
 | `error_not_found.json` | any | real 404 |
 | `error_invalid_prefs.json` | any | real 422 |
 
@@ -63,6 +66,19 @@ distance radius, a smaller catchment), and `ROADMAP` M1 requires the frontend to
 render all four, so the fixtures exist. This matches `docs/DESIGN.md` §4: Tier B
 is the graceful floor, not the norm.
 
+### Why the chat fixtures use canned Gemini answers
+
+`chat_with_cards.json` is a real `POST /chat` response — same extraction union,
+same filter, same ranking, same card shapes — but the two Gemini calls are
+stubbed by the generator. A live model would make the file change on every
+regeneration, and would require a key to build the contract at all. The stubbed
+extraction (`no_pork` + spicy) is exactly what the message means, and the reply is
+written from the cards the filter actually returned, so it passes the same
+grounding check the server applies at runtime.
+
+`chat_degraded.json` needs no stub reasoning: it's what every request returns when
+`GEMINI_API_KEY` is unset.
+
 ## Notes for the frontend
 
 - `rating` and `photo_url` are `null` until M4 (Google Places). Render a
@@ -78,6 +94,22 @@ is the graceful floor, not the norm.
   reshuffle on every call.
 - `hard.jay` (Thai เจ: vegan + no pungent vegetables) sits alongside `hard.jain`
   (vegetarian + no pungent vegetables). They are different constraints.
+- `POST /chat` returns the **same** `recommendation` objects as `/recommend`, plus
+  `reply`, `session_id`, `fallback_used` and `degraded`. Render cards from
+  `recommendations` — never by parsing `reply`. That separation is the guardrail
+  (DESIGN §6), and the backend enforces its half of it: a reply naming a
+  restaurant that isn't in the response is thrown away before it's sent.
+- **A Gemini outage is not an error response.** `/chat` still returns `200` with
+  real cards and `degraded: "LLM_UNAVAILABLE" | "UPSTREAM_TIMEOUT"`; only the
+  prose is canned. Show the inline notice, keep the results
+  (`chat_degraded.json`). `/chat` only 4xx-s for a bad request or unknown user.
+- `session_id`: omit it on the first message, then send back what you were given.
+  It groups a conversation and is what M3's history events will hang off.
+- Heads-up on the data, not the API: some source rows are mislabelled — e.g.
+  `เล้งธรรมดา` and `Beef Burger` carry `contains_pork: 0` / `is_vegan: true` at
+  `confidence: "high"` (8 dishes found by a name-vs-flag scan). `chat_with_cards.json`
+  shows one. The filter is behaving correctly; the input is wrong. Don't file it as
+  a filter bug — it's tracked as a data risk in `ROADMAP` §6.
 - Errors always arrive as `{"error": {code, message, detail}}`. `message` is safe
   to display; `detail` is for logs only.
 - Error codes: `NO_RESULTS`, `INVALID_PREFS`, `NOT_FOUND`, `LLM_UNAVAILABLE`,

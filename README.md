@@ -22,9 +22,10 @@ food_roulette/
     └── requirements.txt
 ```
 
-> **Current status: M0 complete** — both halves run locally and the API contract
-> is committed. The safety filter's test suite (M1), Gemini chat (M2), history
-> (M3), Places (M4) and the roulette widget (M5) follow. See `ROADMAP.md §4`.
+> **Current status: M2 backend complete** — the deterministic safety filter and
+> Gemini chat both run, and the API contract is committed. M1's property-test
+> sweep, history (M3), Places (M4) and the roulette widget (M5) follow. See
+> `ROADMAP.md §4`.
 
 ---
 
@@ -112,8 +113,9 @@ If `restaurants` is `0`, you skipped step 3.
 pytest
 ```
 
-24 tests, well under a second. They build their **own throwaway database** in a
-temp folder — running them never touches your local `food_roulette.db`.
+69 tests, a couple of seconds. They build their **own throwaway database** in a
+temp folder — running them never touches your local `food_roulette.db` — and they
+never call Gemini, so no key is needed and no test can hit the network.
 
 Anything touching the safety filter (`filter.py` / `ranking.py`, M1 onward) must
 have tests, and they gate merges. This is the medical-safety path — see
@@ -124,6 +126,32 @@ have tests, and they gate merges. This is the medical-safety path — see
 ```bash
 python -m app.ingest && uvicorn app.main:app --reload --host 0.0.0.0
 ```
+
+### 6. Chat (optional — needs a Gemini key)
+
+`POST /chat` works **without** a key: it skips Gemini, returns recommendations
+from the saved profile, and says so with `degraded: "LLM_UNAVAILABLE"`. To get the
+written replies, copy `backend/.env.example` to `backend/.env`, fill in
+`GEMINI_API_KEY`, and start the server with it:
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --env-file .env
+```
+
+`.env` is git-ignored — never commit a key, and the Flutter client never holds one.
+
+```bash
+# a user id comes from POST /auth/session
+curl -s localhost:8000/chat -H 'content-type: application/json' -d '{
+  "user_id": "<id>", "text": "อยากกินอะไรเผ็ดๆ ไม่เอาหมู",
+  "latitude": 14.07, "longitude": 100.604
+}'
+```
+
+The order is always **extract → filter → narrate** (`docs/DESIGN.md` §6). Gemini
+turns the message into preferences and later writes the reply, but never picks the
+restaurants: chat-detected rules are *added* to the saved profile (never allowed to
+remove one), and the model only ever sees venues that already cleared the filter.
 
 ---
 
@@ -174,6 +202,9 @@ All overridable via environment variables — defaults work out of the box:
 | `FR_DATA_DIR` | repo root | folder holding `restaurants.json` / `menu_items.json` |
 | `FR_DB_PATH` | `backend/food_roulette.db` | SQLite file location |
 | `FR_CORS_ORIGINS` | `*` | comma-separated browser origins allowed to call the API |
+| `GEMINI_API_KEY` | *(unset)* | enables the written chat reply; unset is a supported state |
+| `GEMINI_EXTRACT_MODEL` / `GEMINI_NARRATE_MODEL` | `gemini-2.5-flash` | pinned, so a renamed model is a deliberate change |
+| `GEMINI_TIMEOUT_MS` | `15000` | 10000 is the floor the API accepts |
 
 Example (use a throwaway DB):
 
