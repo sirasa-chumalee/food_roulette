@@ -22,6 +22,8 @@ food_roulette/
     └── requirements.txt
 ```
 
+> 🇹🇭 **คู่มือภาษาไทย:** `docs/RUN_TH.md` — วิธีเปิด backend + frontend ให้เห็นภาพรวมทำงานจริง
+
 > **Current status: M2 backend complete** — the deterministic safety filter and
 > Gemini chat both run, and the API contract is committed. M1's property-test
 > sweep, history (M3), Places (M4) and the roulette widget (M5) follow. See
