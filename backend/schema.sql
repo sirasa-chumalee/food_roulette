@@ -91,3 +91,7 @@ CREATE TABLE IF NOT EXISTS action_history (
 
 CREATE INDEX IF NOT EXISTS idx_history_session ON action_history(session_id);
 CREATE INDEX IF NOT EXISTS idx_history_user    ON action_history(user_id);
+
+-- M3: fast lookup of session-scoped rejection feedback used by ranking.
+CREATE INDEX IF NOT EXISTS idx_history_session_action_restaurant
+    ON action_history(session_id, action_type, restaurant_id);

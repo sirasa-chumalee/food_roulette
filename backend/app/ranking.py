@@ -30,6 +30,7 @@ PRICE_WEIGHT = 2.0  # per band away from the preferred tier
 DIET_WEIGHT = 2.0  # scaled by the fraction of safe dishes matching the style
 DISTANCE_WEIGHT = 1.0  # per kilometre
 PARKING_BONUS = 0.5  # only when the user asked and the venue is known to have it
+REJECTION_PENALTY = 5.0  # M3: session-scoped feedback only reorders, never filters
 
 # Thai dish names that signal a carbohydrate base. `category` is empty across the
 # whole dataset (ROADMAP §6), so the name is the only carb signal available —
@@ -115,8 +116,17 @@ def _parking_bonus(restaurant: dict, wants_parking: bool) -> float:
     return PARKING_BONUS if wants_parking and restaurant.get("has_parking") == 1 else 0.0
 
 
-def score(candidate: Candidate, soft: SoftPreferences) -> Candidate:
-    """Attach a score and its per-term breakdown to one candidate."""
+def score(
+    candidate: Candidate,
+    soft: SoftPreferences,
+    rejected_restaurant_ids: set[str] | None = None,
+) -> Candidate:
+    """Attach a score and its per-term breakdown to one candidate.
+
+    ``rejected_restaurant_ids`` is session-scoped feedback. It can only lower
+    ordering; it never removes a candidate and therefore cannot bypass M1
+    safety filtering.
+    """
     dishes = candidate.dishes.offered_dishes
 
     breakdown = {
@@ -130,6 +140,11 @@ def score(candidate: Candidate, soft: SoftPreferences) -> Candidate:
             if candidate.distance_m is not None
             else 0.0
         ),
+        "rejection": (
+            -REJECTION_PENALTY
+            if rejected_restaurant_ids and candidate.restaurant.get("id") in rejected_restaurant_ids
+            else 0.0
+        ),
     }
 
     candidate.score_breakdown = breakdown
@@ -141,8 +156,12 @@ def rank(
     candidates: list[Candidate],
     soft: SoftPreferences,
     seed: int | None = None,
+    rejected_restaurant_ids: set[str] | None = None,
 ) -> list[Candidate]:
     """Score and sort, best first. Ties broken randomly.
+
+    Rejections are supplied by the caller for the current session only.
+
 
     The tiebreak is a separate sort key rather than jitter added to the score,
     so it can only reorder genuinely equal candidates — never nudge a worse one
@@ -150,7 +169,10 @@ def rank(
     M5's roulette replay a spin.
     """
     rng = random.Random(seed)
-    scored = [score(candidate, soft) for candidate in candidates]
+    scored = [
+        score(candidate, soft, rejected_restaurant_ids=rejected_restaurant_ids)
+        for candidate in candidates
+    ]
     tiebreak = {id(candidate): rng.random() for candidate in scored}
     scored.sort(key=lambda c: (-c.score, tiebreak[id(c)]))
     return scored
