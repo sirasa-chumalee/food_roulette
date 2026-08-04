@@ -45,25 +45,54 @@ final profileProvider =
 class RecommendationsNotifier extends AsyncNotifier<RecommendOut> {
   @override
   Future<RecommendOut> build() async {
-    // Watching profileProvider ensures recommendations refresh when user changes preferences
-    await ref.watch(profileProvider.future);
+    return _fetchRecommendations();
+  }
 
+  Future<RecommendOut> refreshRecommendations({
+    String? prompt,
+  }) async {
+    state = const AsyncLoading();
+
+    try {
+      final result = await _fetchRecommendations(
+        prompt: prompt,
+      );
+
+      state = AsyncData(result);
+
+      return result;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<RecommendOut> _fetchRecommendations({
+    String? prompt,
+  }) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/recommend'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
           "user_id": "1",
           "limit": 4,
+
+          // Optional if your backend supports chat prompts
+          if (prompt != null) "prompt": prompt,
         }),
       );
 
       if (response.statusCode == 200) {
-        return RecommendOut.fromJson(jsonDecode(response.body));
+        return RecommendOut.fromJson(
+          jsonDecode(response.body),
+        );
       }
-    } catch (_) {}
 
-    // Fallback Mock Data matching RecommendOut schema
+      throw Exception("server returned ${response.statusCode}");
+    } catch (_) {
     return RecommendOut(
       fallbackUsed: true,
       recommendations: [
@@ -104,6 +133,7 @@ class RecommendationsNotifier extends AsyncNotifier<RecommendOut> {
         ),
       ],
     );
+    }
   }
 }
 
