@@ -64,25 +64,33 @@ class RecommendedRestaurant {
   String get displayName => nameTh ?? nameEn ?? 'Restaurant';
 
   factory RecommendedRestaurant.fromJson(Map<String, dynamic> json) {
-    return RecommendedRestaurant(
-      restaurantId: json['restaurant_id'] ?? '',
-      nameTh: json['name_th'],
-      nameEn: json['name_en'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
-      distanceM: json['distance_m']?.toDouble(),
-      priceTier: json['price_tier'],
-      rating: json['rating']?.toDouble(),
-      photoUrl: json['photo_url'],
-      safetyTier: json['safety_tier'] ?? 'unverified',
-      needsAck: json['needs_ack'] ?? false,
-      ackReason: json['ack_reason'],
-      excludedCount: json['excluded_count'] ?? 0,
-      safeDishes: (json['safe_dishes'] as List? ?? [])
-          .map((e) => SafeDish.fromJson(e))
-          .toList(),
-    );
+  // Safe rating parser handling int, double, or String
+  double? parseRating(dynamic rawRating) {
+    if (rawRating == null) return null;
+    if (rawRating is num) return rawRating.toDouble();
+    if (rawRating is String) return double.tryParse(rawRating);
+    return null;
   }
+
+  return RecommendedRestaurant(
+    restaurantId: json['restaurant_id'] ?? '',
+    nameTh: json['name_th'],
+    nameEn: json['name_en'],
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+    distanceM: (json['distance_m'] as num?)?.toDouble(),
+    priceTier: json['price_tier'],
+    rating: parseRating(json['rating'] ?? json['stars'] ?? json['score']),
+    photoUrl: json['photo_url'],
+    safetyTier: json['safety_tier'] ?? 'unverified',
+    needsAck: json['needs_ack'] ?? false,
+    ackReason: json['ack_reason'],
+    excludedCount: json['excluded_count'] ?? 0,
+    safeDishes: (json['safe_dishes'] as List? ?? [])
+        .map((e) => SafeDish.fromJson(e))
+        .toList(),
+  );
+}
 }
 
 class RecommendOut {

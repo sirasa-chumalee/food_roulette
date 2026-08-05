@@ -1,24 +1,31 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
 import '../../../data/models/recommendation.dart';
 
+const String baseUrl = 'http://127.0.0.1:8000';
+
 /// State for the chat screen.
 class ChatState {
+  final String sessionId;
   final bool showInitialGrid;
   final bool isTyping;
-  final String? currentPrompt;
   final List<ChatMessage> messages;
 
   const ChatState({
+    required this.sessionId,
     required this.showInitialGrid,
     required this.isTyping,
     required this.messages,
-    this.currentPrompt,
   });
 
-  factory ChatState.initial() {
+  factory ChatState.initial([String? sessionId]) {
+    final activeSessionId = sessionId ?? const Uuid().v4();
     return ChatState(
+      sessionId: activeSessionId,
       showInitialGrid: true,
       isTyping: false,
       messages: [
@@ -31,72 +38,201 @@ class ChatState {
   }
 
   ChatState copyWith({
+    String? sessionId,
     bool? showInitialGrid,
     bool? isTyping,
-    String? currentPrompt,
     List<ChatMessage>? messages,
   }) {
     return ChatState(
+      sessionId: sessionId ?? this.sessionId,
       showInitialGrid: showInitialGrid ?? this.showInitialGrid,
       isTyping: isTyping ?? this.isTyping,
-      currentPrompt: currentPrompt ?? this.currentPrompt,
       messages: messages ?? this.messages,
     );
   }
 }
 
 class ChatNotifier extends Notifier<ChatState> {
+  final _uuid = const Uuid();
+
   @override
   ChatState build() {
     return ChatState.initial();
   }
 
-  /// User presses Send
-  void sendUserMessage(String text) {
+  /// Alias method for ChatScreen callers
+  Future<void> sendMessage(String text) async {
+    await sendUserMessage(text);
+  }
+
+  /// User presses Send - executes live POST /chat API call
+  Future<void> sendUserMessage(String text) async {
+    final trimmedText = text.trim();
+    if (trimmedText.isEmpty) return;
+
+    // Start with a clean message list for the new turn
+    final updated = <ChatMessage>[];
+
+    // Add only current user prompt and loading state
+    updated.add(ChatMessage.user(trimmedText));
+    updated.add(ChatMessage.loading());
+
     state = state.copyWith(
       showInitialGrid: false,
       isTyping: true,
-      currentPrompt: text,
-      messages: [
-        ChatMessage.user(text),
-        ChatMessage.loading(),
-      ],
+      messages: updated,
     );
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/chat'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'session_id': state.sessionId,
+          'user_id': '1',
+          'text': trimmedText,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final String? replyText = data['reply'];
+        final String? degradedCode = data['degraded'];
+        final bool fallbackUsed = data['fallback_used'] ?? false;
+
+        final restaurants = (data['recommendations'] as List? ?? [])
+            .map((r) => RecommendedRestaurant.fromJson(r))
+            .take(4)
+            .toList();
+
+        addBotResponse(
+          message: replyText ?? '',
+          restaurants: restaurants,
+          fallbackUsed: fallbackUsed,
+          degradedCode: degradedCode,
+        );
+      } else {
+        await _fallbackToPlainResults('LLM_UNAVAILABLE');
+      }
+    } catch (_) {
+      await _fallbackToPlainResults('LLM_UNAVAILABLE');
+    }
   }
 
   /// Called after backend returns recommendations
   void addBotResponse({
     required String message,
     required List<RecommendedRestaurant> restaurants,
+    bool fallbackUsed = false,
+    String? degradedCode,
   }) {
+    final updated = List<ChatMessage>.from(state.messages);
+
+    // 1. Remove typing indicator
+    updated.removeWhere((m) => m.type == ChatMessageType.loading);
+
+    // 2. Remove old recommendation grids
+    updated.removeWhere((m) => m.type == ChatMessageType.recommendations);
+
+    // 3. Add bot text response (if non-empty)
+    if (message.isNotEmpty) {
+      updated.add(
+        ChatMessage.bot(
+          message,
+          fallbackUsed: fallbackUsed,
+          degradedCode: degradedCode,
+        ),
+      );
+    }
+
+    // 4. Append ONLY the new 4 recommendation cards
+    if (restaurants.isNotEmpty) {
+      updated.add(
+        ChatMessage.recommendations(
+          restaurants.take(4).toList(),
+          fallbackUsed: fallbackUsed,
+          degradedCode: message.isEmpty ? degradedCode : null,
+        ),
+      );
+    }
+
     state = state.copyWith(
       isTyping: false,
-      messages: [
-        ChatMessage.user(state.currentPrompt ?? ""),
-        ChatMessage.bot(message),
-        ChatMessage.recommendations(restaurants),
-      ],
+      messages: updated,
     );
+  }
+
+  /// Fallback handler when LLM/Gemini is degraded or offline
+  Future<void> _fallbackToPlainResults(String degradedReason) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recommend'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': '1',
+          'limit': 4,
+        }),
+      );
+
+      List<RecommendedRestaurant> recs = [];
+      bool fallbackUsed = false;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        fallbackUsed = data['fallback_used'] ?? false;
+
+        recs = (data['recommendations'] as List? ?? [])
+            .map((r) => RecommendedRestaurant.fromJson(r))
+            .take(4)
+            .toList();
+      }
+
+      final updated = List<ChatMessage>.from(state.messages);
+
+      // Remove typing indicator AND previous recommendation grids
+      updated.removeWhere((m) => m.type == ChatMessageType.loading);
+      updated.removeWhere((m) => m.type == ChatMessageType.recommendations);
+
+      updated.add(
+        ChatMessage.recommendations(
+          recs,
+          fallbackUsed: fallbackUsed,
+          degradedCode: degradedReason,
+        ),
+      );
+
+      state = state.copyWith(
+        isTyping: false,
+        messages: updated,
+      );
+    } catch (_) {
+      addError('Unable to connect to recommendation service at this time.');
+    }
   }
 
   /// Backend/API failed
   void addError(String message) {
+    final updated = List<ChatMessage>.from(state.messages);
+
+    updated.removeWhere((m) => m.type == ChatMessageType.loading);
+
+    updated.add(
+      ChatMessage.error(message),
+    );
+
     state = state.copyWith(
       isTyping: false,
-      messages: [
-        ChatMessage.user(state.currentPrompt ?? ""),
-        ChatMessage.error(message),
-      ],
+      messages: updated,
     );
   }
 
   /// New conversation
   void reset() {
-    state = ChatState.initial();
+    state = ChatState.initial(_uuid.v4());
   }
 }
 
-final chatProvider =
-    NotifierProvider<ChatNotifier, ChatState>(
+final chatProvider = NotifierProvider<ChatNotifier, ChatState>(
   ChatNotifier.new,
 );

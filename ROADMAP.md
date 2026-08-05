@@ -266,10 +266,10 @@ until after the M1 filter has run.
       every degradation path keeps the filter intact
 
 **Frontend**
-- [ ] Chat feed: typed message stream where some messages **are** recommendation-card widgets
-- [ ] Composer, pending/typing state, per-message error state
-- [ ] `chatSessionProvider` (AsyncNotifier) holding the message list + session id
-- [ ] Handle `LLM_UNAVAILABLE` by falling back to the plain results view with an inline notice
+- [x] Chat feed: typed message stream where some messages **are** recommendation-card widgets
+- [x] Composer, pending/typing state, per-message error state
+- [x] `chatSessionProvider` (AsyncNotifier) holding the message list + session id
+- [x] Handle `LLM_UNAVAILABLE` by falling back to the plain results view with an inline notice
 
 **Contract handoff:** ✅ `fixtures/chat_with_cards.json`, `chat_no_cards.json`, `chat_degraded.json`
 (the LLM-failure case is a `200` with `degraded`, not an envelope — see `docs/api/README.md`).

@@ -34,10 +34,11 @@ class _MessageInputState extends State<MessageInput> {
 
   void _send() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    widget.onSend(text);
+    if (text.isEmpty || !widget.enabled) return;
+
     _controller.clear();
-    _focusNode.requestFocus();
+    _focusNode.unfocus(); // Unfocuses so input resets cleanly and re-enables properly
+    widget.onSend(text);
   }
 
   @override
@@ -59,16 +60,16 @@ class _MessageInputState extends State<MessageInput> {
               child: TextField(
                 controller: _controller,
                 focusNode: _focusNode,
-                enabled : widget.enabled,
+                enabled: widget.enabled,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
                 decoration: InputDecoration(
                   hintText: "Type a response here...",
                   filled: true,
                   fillColor: const Color(0xFFF5F5F5),
-                  border : OutlineInputBorder(
-                    borderRadius : BorderRadius.circular(30),
-                    borderSide : BorderSide.none,                    
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -82,16 +83,16 @@ class _MessageInputState extends State<MessageInput> {
               radius: 24,
               backgroundColor: Colors.black,
               child: IconButton(
-                onPressed: widget.enabled ? _send : null, 
+                onPressed: widget.enabled ? _send : null,
                 icon: const Icon(
                   Icons.send_rounded,
                   color: Colors.white,
-                )
+                ),
               ),
             )
           ],
         ),
-      )
+      ),
     );
   }
 }
