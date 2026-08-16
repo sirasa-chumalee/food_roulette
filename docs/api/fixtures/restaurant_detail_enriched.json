@@ -1,0 +1,427 @@
+{
+  "restaurant": {
+    "id": "tu_place_1",
+    "name_th": "Swan Lake",
+    "name_en": null,
+    "latitude": 14.0650007,
+    "longitude": 100.5976192,
+    "price_band": "$$$$",
+    "has_parking": 2
+  },
+  "menu": [
+    {
+      "id": 1,
+      "name_th": "ไข่ตุ๋นฟูจิ",
+      "name_en": null,
+      "category": null,
+      "price_thb": 200.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 2,
+      "name_th": "หอยลายผัดพริกเผา",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 2,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 3,
+      "name_th": "สามชั้นทอดน้ำปลา",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 4,
+      "name_th": "ปีกไก่ทอด",
+      "name_en": null,
+      "category": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 5,
+      "name_th": "ไข่เจียวปู",
+      "name_en": null,
+      "category": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 6,
+      "name_th": "ไก่ทอดเกลือ",
+      "name_en": null,
+      "category": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 7,
+      "name_th": "ต้มยำกุ้งน้ำข้น",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 2,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 8,
+      "name_th": "ต้มข่าไก่",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 2,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 9,
+      "name_th": "แกงเขียวหวานหมู",
+      "name_en": null,
+      "category": null,
+      "price_thb": 160.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 10,
+      "name_th": "ปลากะพงต้มซ่า",
+      "name_en": null,
+      "category": null,
+      "price_thb": 380.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 11,
+      "name_th": "กุ้งอบวุ้นเส้น",
+      "name_en": null,
+      "category": null,
+      "price_thb": 240.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 12,
+      "name_th": "หมูป่าผัดเผ็ด",
+      "name_en": null,
+      "category": null,
+      "price_thb": 200.0,
+      "spicy_level": 2,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 13,
+      "name_th": "ผักบุ้งไฟแดง",
+      "name_en": null,
+      "category": null,
+      "price_thb": 120.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 14,
+      "name_th": "ปลาหมึกผัดไข่เค็ม",
+      "name_en": null,
+      "category": null,
+      "price_thb": 300.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 15,
+      "name_th": "คะน้าหมูกรอบ",
+      "name_en": null,
+      "category": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 16,
+      "name_th": "ทะเลผัดพริกเผา",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 2,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 17,
+      "name_th": "ปลากะพงทอดน้ำปลา",
+      "name_en": null,
+      "category": null,
+      "price_thb": 380.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 18,
+      "name_th": "ข้าวผัดปู",
+      "name_en": null,
+      "category": null,
+      "price_thb": 80.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 19,
+      "name_th": "ข้าวผัดกะเพราเนื้อ",
+      "name_en": null,
+      "category": null,
+      "price_thb": 80.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 20,
+      "name_th": "ข้าวผัดอเมริกัน",
+      "name_en": null,
+      "category": null,
+      "price_thb": 75.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 21,
+      "name_th": "ส้มตำไทย",
+      "name_en": null,
+      "category": null,
+      "price_thb": 80.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 22,
+      "name_th": "ส้มตำปูม้า",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    },
+    {
+      "id": 23,
+      "name_th": "หมูแดดเดียว",
+      "name_en": null,
+      "category": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 24,
+      "name_th": "ลาบเป็ดกรอบ",
+      "name_en": null,
+      "category": null,
+      "price_thb": 180.0,
+      "spicy_level": 0,
+      "confidence": "high",
+      "safety_tier": "verified"
+    },
+    {
+      "id": 25,
+      "name_th": "ห่อหมกทะเล",
+      "name_en": null,
+      "category": null,
+      "price_thb": 240.0,
+      "spicy_level": 0,
+      "confidence": "low",
+      "safety_tier": "unverified"
+    }
+  ],
+  "safe_dishes": [
+    {
+      "id": 1,
+      "name_th": "ไข่ตุ๋นฟูจิ",
+      "name_en": null,
+      "price_thb": 200.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 2,
+      "name_th": "หอยลายผัดพริกเผา",
+      "name_en": null,
+      "price_thb": 180.0,
+      "spicy_level": 2,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 4,
+      "name_th": "ปีกไก่ทอด",
+      "name_en": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 5,
+      "name_th": "ไข่เจียวปู",
+      "name_en": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 6,
+      "name_th": "ไก่ทอดเกลือ",
+      "name_en": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 8,
+      "name_th": "ต้มข่าไก่",
+      "name_en": null,
+      "price_thb": 180.0,
+      "spicy_level": 2,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 9,
+      "name_th": "แกงเขียวหวานหมู",
+      "name_en": null,
+      "price_thb": 160.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 10,
+      "name_th": "ปลากะพงต้มซ่า",
+      "name_en": null,
+      "price_thb": 380.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 11,
+      "name_th": "กุ้งอบวุ้นเส้น",
+      "name_en": null,
+      "price_thb": 240.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 12,
+      "name_th": "หมูป่าผัดเผ็ด",
+      "name_en": null,
+      "price_thb": 200.0,
+      "spicy_level": 2,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 13,
+      "name_th": "ผักบุ้งไฟแดง",
+      "name_en": null,
+      "price_thb": 120.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 15,
+      "name_th": "คะน้าหมูกรอบ",
+      "name_en": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 17,
+      "name_th": "ปลากะพงทอดน้ำปลา",
+      "name_en": null,
+      "price_thb": 380.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 20,
+      "name_th": "ข้าวผัดอเมริกัน",
+      "name_en": null,
+      "price_thb": 75.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 23,
+      "name_th": "หมูแดดเดียว",
+      "name_en": null,
+      "price_thb": 150.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    },
+    {
+      "id": 24,
+      "name_th": "ลาบเป็ดกรอบ",
+      "name_en": null,
+      "price_thb": 180.0,
+      "spicy_level": 0,
+      "safety_tier": "verified"
+    }
+  ],
+  "places": {
+    "rating": 4.3,
+    "user_rating_count": 215,
+    "display_name": "ร้านอาหารตัวอย่าง",
+    "formatted_address": "99 หมู่ 1 ถนนพหลโยธิน คลองหลวง ปทุมธานี 12120",
+    "photos": [
+      "/restaurants/tu_place_1/photos/0",
+      "/restaurants/tu_place_1/photos/1"
+    ],
+    "opening_hours": [
+      "Monday: 10:00 AM – 10:00 PM",
+      "Tuesday: 10:00 AM – 10:00 PM",
+      "Wednesday: 10:00 AM – 10:00 PM",
+      "Thursday: 10:00 AM – 10:00 PM",
+      "Friday: 10:00 AM – 11:00 PM",
+      "Saturday: 9:00 AM – 11:00 PM",
+      "Sunday: 9:00 AM – 10:00 PM"
+    ],
+    "reviews": [
+      {
+        "author_name": "พลอย",
+        "rating": 5.0,
+        "text": "อาหารอร่อยมาก บรรยากาศดี พนักงานบริการเป็นกันเอง แนะนำเลยค่ะ",
+        "relative_time": "a month ago"
+      },
+      {
+        "author_name": "Tan",
+        "rating": 4.0,
+        "text": "Good food, reasonable prices. Parking can be tight on weekends.",
+        "relative_time": "2 months ago"
+      }
+    ],
+    "synced_at": "2099-01-01T00:00:00+00:00"
+  }
+}

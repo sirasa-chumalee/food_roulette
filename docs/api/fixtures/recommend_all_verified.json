@@ -54,7 +54,7 @@
       "safety_tier": "verified",
       "needs_ack": false,
       "ack_reason": null,
-      "excluded_count": 13,
+      "excluded_count": 14,
       "safe_dishes": [
         {
           "id": 1006,

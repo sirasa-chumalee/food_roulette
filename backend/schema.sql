@@ -17,12 +17,16 @@ CREATE TABLE IF NOT EXISTS restaurants (
     is_halal_certified INTEGER,                   -- 0 = placeholder; do NOT filter on yet
     has_parking        INTEGER,                   -- 2 = "unknown" sentinel
 
-    -- Cached Google Places enrichment (Phase 3; null until synced)
-    rating             REAL,
-    photo_ref          TEXT,
-    hours_json         TEXT,
-    places_synced_at   TEXT
-);
+    -- Cached Google Places enrichment (M4; null until synced)
+        rating              REAL,
+        user_rating_count   INTEGER,
+        places_display_name TEXT,
+        places_address      TEXT,
+        photo_refs_json     TEXT,
+        hours_json          TEXT,
+        reviews_json        TEXT,
+        places_synced_at    TEXT
+    );
 
 CREATE TABLE IF NOT EXISTS menu_items (
     id                   INTEGER PRIMARY KEY,     -- global id from menu_items.json

@@ -19,12 +19,13 @@ from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__, config, db, ranking, schemas
 from . import filter as safety_filter  # `filter` shadows the builtin otherwise
+from . import places
 from .llm import extract as llm_extract
 from .llm import narrate as llm_narrate
 
@@ -257,9 +258,10 @@ def list_restaurants() -> list[dict]:
     return [dict(row) for row in rows]
 
 
-@app.get("/restaurants/{restaurant_id}")
-def get_restaurant(restaurant_id: str) -> dict:
-    """A restaurant plus its full menu (used to eyeball the ingested data)."""
+@app.get("/restaurants/{restaurant_id}", response_model=schemas.RestaurantDetailOut)
+def get_restaurant(restaurant_id: str) -> schemas.RestaurantDetailOut:
+    """A restaurant's detail-screen payload: menu, safe-dish list, and cached
+    Google Places enrichment (lazy; nulls when not keyed)."""
     conn = db.connect()
     try:
         restaurant = conn.execute(
@@ -271,9 +273,127 @@ def get_restaurant(restaurant_id: str) -> dict:
             "SELECT * FROM menu_items WHERE restaurant_id = ? ORDER BY id;",
             (restaurant_id,),
         ).fetchall()
+        enrichment = places.enrichment_for(conn, restaurant_id)
+        photos = places.photo_urls(conn, restaurant_id)
+        # enrichment_for may have just cached a fresh enrichment — save_cached
+        # writes places_synced_at — so read it back rather than trusting the
+        # pre-fetch row snapshot above (which would still say NULL).
+        synced_at = conn.execute(
+            "SELECT places_synced_at FROM restaurants WHERE id = ?;", (restaurant_id,)
+        ).fetchone()["places_synced_at"]
     finally:
         conn.close()
-    return {"restaurant": dict(restaurant), "menu": [dict(m) for m in menu]}
+    return _detail_restaurant_detail(restaurant, menu, enrichment, photos, synced_at)
+
+
+@app.get("/restaurants/{restaurant_id}/photos/{photo_index}")
+def restaurant_photo(restaurant_id: str, photo_index: int) -> Response:
+    """Proxy one of a restaurant's cached Place photos *through* the backend.
+
+    The only Place handle the client ever holds is this keyless URL; the real
+    Places key is added here, server-side, and so never leaves the process
+    (DESIGN §7).
+    """
+    conn = db.connect()
+    try:
+        restaurant = conn.execute(
+            "SELECT id FROM restaurants WHERE id = ?;", (restaurant_id,)
+        ).fetchone()
+        if restaurant is None:
+            raise ApiError(404, "NOT_FOUND", "We couldn't find that restaurant.")
+        names = places.photo_names_for(conn, restaurant_id)
+        if photo_index < 0 or photo_index >= len(names):
+            raise ApiError(404, "NOT_FOUND", "That photo isn't available.")
+        photo_name = names[photo_index]
+    finally:
+        conn.close()
+
+    try:
+        content = places.fetch_photo_bytes(
+            photo_name, max_width=config.PLACES_MAX_PHOTO_WIDTH
+        )
+    except places.PlacesTimeout as exc:
+        raise ApiError(504, "UPSTREAM_TIMEOUT", "The photo provider took too long.", str(exc))
+    except places.PlacesUnavailable as exc:
+        # Forbidden (no key), quota, or a generic upstream failure — all mean
+        # "no photo this request", and the client's image widget shows a
+        # placeholder rather than breaking the screen.
+        raise ApiError(502, "INTERNAL", "We couldn't fetch that photo.", str(exc))
+    return Response(content=content, media_type="image/jpeg")
+
+
+def _detail_restaurant_detail(
+    restaurant, menu, enrichment, photos, synced_at
+) -> schemas.RestaurantDetailOut:
+    return schemas.RestaurantDetailOut(
+        restaurant=_restaurant_dict(restaurant),
+        menu=[_menu_dish(m) for m in menu],
+        safe_dishes=[
+            _to_safe_dish(m)
+            for m in menu
+            if safety_filter.tier_of(m) == safety_filter.TIER_VERIFIED
+        ],
+        places=_places_enrichment(enrichment, photos, synced_at),
+    )
+
+
+def _restaurant_dict(row) -> dict:
+    """Scalar display fields only — never the raw Places cache columns."""
+    return {
+        "id": row["id"],
+        "name_th": row["name_th"],
+        "name_en": row["name_en"],
+        "latitude": row["latitude"],
+        "longitude": row["longitude"],
+        "price_band": row["price_band"],
+        "has_parking": row["has_parking"],
+    }
+
+
+def _menu_dish(row) -> dict:
+    """A menu item as the detail screen renders it, with its safety tier."""
+    return {
+        "id": row["id"],
+        "name_th": row["name_th"],
+        "name_en": row["name_en"],
+        "category": row["category"],
+        "price_thb": row["price_thb"],
+        "spicy_level": row["spicy_level"],
+        "confidence": row["confidence"],
+        "safety_tier": safety_filter.tier_of(row),
+    }
+
+
+def _to_safe_dish(row) -> schemas.SafeDish:
+    """One menu row shaped as a `SafeDish`, tagged with its safety tier."""
+    return schemas.SafeDish(
+        id=row["id"],
+        name_th=row["name_th"],
+        name_en=row["name_en"],
+        price_thb=row["price_thb"],
+        spicy_level=row["spicy_level"],
+        safety_tier=safety_filter.tier_of(row),
+    )
+
+
+def _places_enrichment(
+    enrichment: places.PlaceEnrichment | None,
+    photo_urls: list[str],
+    synced_at: str | None,
+) -> schemas.PlacesEnrichment:
+    """Shape an enrichment into the wire object; `None` (or zip) degrades to nulls."""
+    if enrichment is None:
+        return schemas.PlacesEnrichment(synced_at=synced_at)
+    return schemas.PlacesEnrichment(
+        rating=enrichment.rating,
+        user_rating_count=enrichment.user_rating_count,
+        display_name=enrichment.display_name,
+        formatted_address=enrichment.formatted_address,
+        photos=photo_urls,
+        opening_hours=list(enrichment.opening_hours),
+        reviews=[schemas.PlaceReview(**review) for review in enrichment.reviews],
+        synced_at=synced_at,
+    )
 
 
 # ---------------------------------------------------------------------------

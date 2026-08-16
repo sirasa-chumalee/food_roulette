@@ -5,7 +5,7 @@
 > **this file = who builds what, in what order, and where the two tracks meet.**
 > If this file and `docs/DESIGN.md` disagree, DESIGN.md wins on *how*, this file wins on *when/who*.
 
-Last updated 2026-08-01 (M2 backend complete).
+Last updated 2026-08-16 (M4 backend complete).
 
 ---
 
@@ -301,13 +301,13 @@ Deliberately placed **before** Places: it's cheap, needs no API key, and immedia
 
 ### M4 — Google Places enrichment (≈4 days) · *gated on the owner supplying an API key*
 
-**Backend**
-- [ ] `places.py` — Place Details keyed by the `google_place_id` already in `restaurants.json`
+**Backend** — ✅ done 2026-08-16
+- [x] `places.py` — Place Details keyed by the `google_place_id` already in `restaurants.json`
       (no name search, no geocoding)
-- [ ] Lazy + cached into the restaurant row + `places_synced_at`; a stale/failed lookup degrades to nulls
-- [ ] Photo proxied or signed **through the backend** — the client never sees the key
-- [ ] `GET /restaurants/{id}` extended: Places rating/photos/reviews/hours + safe-dish list
-- [ ] **Safety flags always come from our data, never from Places**
+- [x] Lazy + cached into the restaurant row + `places_synced_at`; a stale/failed lookup degrades to nulls
+- [x] Photo proxied or signed **through the backend** — the client never sees the key
+- [x] `GET /restaurants/{id}` extended: Places rating/photos/reviews/hours + safe-dish list
+- [x] **Safety flags always come from our data, never from Places**
 
 **Frontend**
 - [ ] Restaurant detail screen: photos, rating, reviews, opening hours, safe-dish list

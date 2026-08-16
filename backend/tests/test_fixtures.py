@@ -30,6 +30,11 @@ CHAT_FIXTURES = [
     "chat_degraded.json",
 ]
 
+RESTAURANT_DETAIL_FIXTURES = [
+    "restaurant_detail.json",
+    "restaurant_detail_enriched.json",
+]
+
 
 def load(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
@@ -98,9 +103,43 @@ def test_other_fixtures_match_their_models():
     assert load("health.json")["status"] == "ok"
 
 
+@pytest.mark.parametrize("name", RESTAURANT_DETAIL_FIXTURES)
+def test_restaurant_detail_fixture_matches_the_model(name):
+    schemas.RestaurantDetailOut.model_validate(load(name))
+
+
+def test_the_two_restaurant_detail_states_are_covered():
+    """ROADMAP M4 promises FE the keyless (nulls) and enriched detail states."""
+    keyless = schemas.RestaurantDetailOut.model_validate(load("restaurant_detail.json"))
+    enriched = schemas.RestaurantDetailOut.model_validate(
+        load("restaurant_detail_enriched.json")
+    )
+
+    # Keyless: every Places field is null/empty — the "works, just plainer" state.
+    assert keyless.places.rating is None
+    assert keyless.places.photos == []
+    assert keyless.places.reviews == []
+    assert keyless.places.synced_at is None
+
+    # Enriched: real rating/photos/reviews/hours; photos are keyless backend URLs.
+    assert enriched.places.rating is not None
+    assert enriched.places.photos
+    assert enriched.places.reviews
+    assert enriched.places.opening_hours
+    for photo in enriched.places.photos:
+        assert photo.startswith("/restaurants/")
+        assert "key=" not in photo
+
+    # The safe-dish list is the verified subset in both states.
+    for detail in (keyless, enriched):
+        assert detail.menu
+        assert detail.safe_dishes
+        assert all(d.safety_tier == "verified" for d in detail.safe_dishes)
+
+
 def test_every_fixture_file_is_covered_by_this_suite():
     """A new fixture must be asserted on, not just dropped in the folder."""
-    known = set(RECOMMEND_FIXTURES) | set(CHAT_FIXTURES) | {
+    known = set(RECOMMEND_FIXTURES) | set(CHAT_FIXTURES) | set(RESTAURANT_DETAIL_FIXTURES) | {
         "auth_session.json",
         "preferences.json",
         "health.json",

@@ -25,7 +25,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import config, db, ingest  # noqa: E402
+from app import config, db, ingest, places  # noqa: E402
 from app.llm import extract as llm_extract  # noqa: E402
 from app.llm import narrate as llm_narrate  # noqa: E402
 from app.main import app  # noqa: E402
@@ -243,6 +243,66 @@ def build_chat_fixtures(client: TestClient, user_id: str) -> None:
     write_json("chat_degraded.json", trim(degraded))
 
 
+def _fixture_enrichment() -> places.PlaceEnrichment:
+    """A representative Place Details response, used to seed the enriched fixture."""
+    return places.PlaceEnrichment(
+        rating=4.3,
+        user_rating_count=215,
+        display_name="ร้านอาหารตัวอย่าง",
+        formatted_address="99 หมู่ 1 ถนนพหลโยธิน คลองหลวง ปทุมธานี 12120",
+        photo_names=["places/ChIJ/fixture/photo/1", "places/ChIJ/fixture/photo/2"],
+        opening_hours=[
+            "Monday: 10:00 AM – 10:00 PM",
+            "Tuesday: 10:00 AM – 10:00 PM",
+            "Wednesday: 10:00 AM – 10:00 PM",
+            "Thursday: 10:00 AM – 10:00 PM",
+            "Friday: 10:00 AM – 11:00 PM",
+            "Saturday: 9:00 AM – 11:00 PM",
+            "Sunday: 9:00 AM – 10:00 PM",
+        ],
+        reviews=[
+            {
+                "author_name": "พลอย",
+                "rating": 5,
+                "text": "อาหารอร่อยมาก บรรยากาศดี พนักงานบริการเป็นกันเอง แนะนำเลยค่ะ",
+                "relative_time": "a month ago",
+            },
+            {
+                "author_name": "Tan",
+                "rating": 4,
+                "text": "Good food, reasonable prices. Parking can be tight on weekends.",
+                "relative_time": "2 months ago",
+            },
+        ],
+    )
+
+
+def build_restaurant_detail_fixtures(client: TestClient, conn) -> None:
+    """Two states the detail screen must render (ROADMAP M4, contract handoff):
+    a degraded (keyless, all nulls) response, and an enriched one."""
+    row = conn.execute(
+        "SELECT id FROM restaurants "
+        "WHERE google_place_id IS NOT NULL "
+        "ORDER BY (SELECT COUNT(*) FROM menu_items m WHERE m.restaurant_id = restaurants.id) DESC, id "
+        "LIMIT 1;"
+    ).fetchone()
+    rid = row["id"]
+
+    # --- Case 1: keyless (no enrichment) — every Places field is null ---------
+    write_json("restaurant_detail.json", client.get(f"/restaurants/{rid}").json())
+
+    # --- Case 2: enriched (seeded cache → real endpoint response) -------------
+    places.save_cached(conn, rid, _fixture_enrichment())
+    # Fixed far-future synced_at so is_fresh always returns True in the generator
+    # and the cached data is served without attempting a real Places fetch.
+    conn.execute(
+        "UPDATE restaurants SET places_synced_at = ? WHERE id = ?;",
+        ("2099-01-01T00:00:00+00:00", rid),
+    )
+    conn.commit()
+    write_json("restaurant_detail_enriched.json", client.get(f"/restaurants/{rid}").json())
+
+
 def main() -> None:
     DOCS_API.mkdir(parents=True, exist_ok=True)
     FIXTURES.mkdir(parents=True, exist_ok=True)
@@ -263,11 +323,11 @@ def main() -> None:
         conn = db.connect(config.DB_PATH)
         try:
             ingest.ingest(conn, config.DATA_DIR)
+            with TestClient(app) as client:
+                build_fixtures(client)
+                build_restaurant_detail_fixtures(client, conn)
         finally:
             conn.close()
-
-        with TestClient(app) as client:
-            build_fixtures(client)
 
 
 if __name__ == "__main__":

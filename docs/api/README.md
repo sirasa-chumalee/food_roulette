@@ -42,12 +42,12 @@ silently breaking the frontend's mocks.
 | `chat_with_cards.json` | `POST /chat` | real — "อยากกินอะไรเผ็ดๆ ไม่เอาหมู", canned Gemini answers (see below) |
 | `chat_no_cards.json` | `POST /chat` | **synthesised** — same reason as `recommend_empty.json`; the reply is the server's real constant |
 | `chat_degraded.json` | `POST /chat` | real — the Gemini-outage path, byte-for-byte what a keyless deployment returns |
+| `restaurant_detail.json` | `GET /restaurants/{id}` | real — keyless (nulls) response; the degraded "works, just plainer" state |
+| `restaurant_detail_enriched.json` | `GET /restaurants/{id}` | real endpoint response with a **seeded** cache (no real Places call); shows rating/photos/reviews/hours |
 | `error_not_found.json` | any | real 404 |
 | `error_invalid_prefs.json` | any | real 422 |
 
-Responses are truncated to 3 cards × 3 dishes for readability. Nothing else about
-them is edited — field names, nulls and value types are exactly what the server
-sends.
+Responses are truncated to 3 cards × 3 dishes for readability. **Restaurant detail fixtures are NOT truncated** — the fixture shows the full 25-dish menu so the detail screen can be built from a realistic payload.
 
 ### Why two fixtures are synthesised
 
@@ -81,8 +81,11 @@ grounding check the server applies at runtime.
 
 ## Notes for the frontend
 
-- `rating` and `photo_url` are `null` until M4 (Google Places). Render a
-  placeholder — don't hide the card.
+- `rating` and `photo_url` on the **recommendation card** (`POST /recommend`, `POST /chat`) are
+  still `null` in the current response shape. The `GET /restaurants/{id}` detail
+  endpoint now returns Places enrichment (rating, photos, reviews, opening hours)
+  when a `GOOGLE_PLACES_API_KEY` is configured, and degrades to nulls otherwise.
+  See `restaurant_detail.json` and `restaurant_detail_enriched.json` for both states.
 - `price_tier` is now populated (`$`…`$$$$`, derived at ingest from each menu's
   median price). It can still be `null` for a venue with no priced dish — show
   "unknown", not "cheap".

@@ -65,7 +65,10 @@ paths:
   /restaurants/{restaurant_id}:
     get:
       summary: Get Restaurant
-      description: A restaurant plus its full menu (used to eyeball the ingested data).
+      description: 'A restaurant''s detail-screen payload: menu, safe-dish list, and
+        cached
+
+        Google Places enrichment (lazy; nulls when not keyed).'
       operationId: get_restaurant_restaurants__restaurant_id__get
       parameters:
       - name: restaurant_id
@@ -80,8 +83,156 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                title: Response Get Restaurant Restaurants  Restaurant Id  Get
+                $ref: '#/components/schemas/RestaurantDetailOut'
+        '422':
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        default:
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /restaurants/{restaurant_id}/photos/{photo_index}:
+    get:
+      summary: Restaurant Photo
+      description: 'Proxy one of a restaurant''s cached Place photos *through* the
+        backend.
+
+
+        The only Place handle the client ever holds is this keyless URL; the real
+
+        Places key is added here, server-side, and so never leaves the process
+
+        (DESIGN §7).'
+      operationId: restaurant_photo_restaurants__restaurant_id__photos__photo_index__get
+      parameters:
+      - name: restaurant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Restaurant Id
+      - name: photo_index
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Photo Index
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        default:
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /history:
+    post:
+      summary: Write History
+      description: 'Persist a batch of user feedback/impression events.
+
+
+        The endpoint is intentionally fire-and-forget friendly: the whole batch is
+
+        committed atomically, and no event is allowed to alter the safety filter.'
+      operationId: write_history_history_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoryBatchIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryWriteOut'
+        '422':
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        default:
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    get:
+      summary: Get History
+      description: Return a user's newest history events first.
+      operationId: get_history_history_get
+      parameters:
+      - name: user_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: User Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryOut'
+        '422':
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        default:
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /history/stats:
+    get:
+      summary: Get History Stats
+      description: Return aggregated history statistics for a user.
+      operationId: get_history_stats_history_stats_get
+      parameters:
+      - name: user_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryStatsOut'
         '422':
           description: Error envelope (ROADMAP §3.2)
           content:
@@ -209,12 +360,21 @@ paths:
 
         level and distance.'
       operationId: recommend_recommend_post
+      parameters:
+      - name: session_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/RecommendIn'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -424,6 +584,250 @@ components:
       description: 'Non-negotiable rules. Every one of these is enforced in SQL by
 
         `filter.py` — the LLM never gets a say (DESIGN §4).'
+    HistoryBatchIn:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        events:
+          items:
+            $ref: '#/components/schemas/HistoryEvent'
+          type: array
+          title: Events
+      type: object
+      required:
+      - user_id
+      - events
+      title: HistoryBatchIn
+    HistoryEvent:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        restaurant_id:
+          type: string
+          title: Restaurant Id
+        action_type:
+          type: string
+          enum:
+          - IMPRESSION
+          - CLICK
+          - SPIN
+          - REJECTION
+          title: Action Type
+        context:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Context
+      type: object
+      required:
+      - session_id
+      - restaurant_id
+      - action_type
+      title: HistoryEvent
+    HistoryEventOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        session_id:
+          type: string
+          title: Session Id
+        user_id:
+          type: string
+          title: User Id
+        restaurant_id:
+          type: string
+          title: Restaurant Id
+        action_type:
+          type: string
+          enum:
+          - IMPRESSION
+          - CLICK
+          - SPIN
+          - REJECTION
+          title: Action Type
+        ts:
+          type: string
+          title: Ts
+        context:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Context
+      type: object
+      required:
+      - id
+      - session_id
+      - user_id
+      - restaurant_id
+      - action_type
+      - ts
+      title: HistoryEventOut
+    HistoryOut:
+      properties:
+        history:
+          items:
+            $ref: '#/components/schemas/HistoryEventOut'
+          type: array
+          title: History
+      type: object
+      required:
+      - history
+      title: HistoryOut
+    HistoryRestaurantStats:
+      properties:
+        restaurant_id:
+          type: string
+          title: Restaurant Id
+        impressions:
+          type: integer
+          title: Impressions
+        clicks:
+          type: integer
+          title: Clicks
+        rejections:
+          type: integer
+          title: Rejections
+        spins:
+          type: integer
+          title: Spins
+        click_through_rate:
+          type: number
+          title: Click Through Rate
+      type: object
+      required:
+      - restaurant_id
+      - impressions
+      - clicks
+      - rejections
+      - spins
+      - click_through_rate
+      title: HistoryRestaurantStats
+    HistoryStatsOut:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        totals:
+          $ref: '#/components/schemas/HistoryStatsTotals'
+        click_through_rate:
+          type: number
+          title: Click Through Rate
+        restaurants:
+          items:
+            $ref: '#/components/schemas/HistoryRestaurantStats'
+          type: array
+          title: Restaurants
+      type: object
+      required:
+      - user_id
+      - totals
+      - click_through_rate
+      - restaurants
+      title: HistoryStatsOut
+    HistoryStatsTotals:
+      properties:
+        impressions:
+          type: integer
+          title: Impressions
+        clicks:
+          type: integer
+          title: Clicks
+        rejections:
+          type: integer
+          title: Rejections
+        spins:
+          type: integer
+          title: Spins
+      type: object
+      required:
+      - impressions
+      - clicks
+      - rejections
+      - spins
+      title: HistoryStatsTotals
+    HistoryWriteOut:
+      properties:
+        accepted:
+          type: integer
+          title: Accepted
+      type: object
+      required:
+      - accepted
+      title: HistoryWriteOut
+    PlaceReview:
+      properties:
+        author_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Author Name
+        rating:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Rating
+        text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Text
+        relative_time:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Relative Time
+      type: object
+      title: PlaceReview
+    PlacesEnrichment:
+      properties:
+        rating:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Rating
+        user_rating_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: User Rating Count
+        display_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Display Name
+        formatted_address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Formatted Address
+        photos:
+          items:
+            type: string
+          type: array
+          title: Photos
+          default: []
+        opening_hours:
+          items:
+            type: string
+          type: array
+          title: Opening Hours
+          default: []
+        reviews:
+          items:
+            $ref: '#/components/schemas/PlaceReview'
+          type: array
+          title: Reviews
+          default: []
+        synced_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Synced At
+      type: object
+      title: PlacesEnrichment
     PreferencesIn:
       properties:
         hard:
@@ -605,6 +1009,30 @@ components:
         `rating` and `photo_url` stay null until M4 wires up Google Places; the
 
         client must render gracefully without them from day one.'
+    RestaurantDetailOut:
+      properties:
+        restaurant:
+          type: object
+          title: Restaurant
+        menu:
+          items:
+            type: object
+          type: array
+          title: Menu
+        safe_dishes:
+          items:
+            $ref: '#/components/schemas/SafeDish'
+          type: array
+          title: Safe Dishes
+        places:
+          $ref: '#/components/schemas/PlacesEnrichment'
+      type: object
+      required:
+      - restaurant
+      - menu
+      - safe_dishes
+      - places
+      title: RestaurantDetailOut
     SafeDish:
       properties:
         id:

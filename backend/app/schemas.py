@@ -166,3 +166,36 @@ class ChatOut(BaseModel):
     # The cards are still real — they came from the same filter as /recommend —
     # so this is a note, not an error.
     degraded: ErrorCode | None = None
+
+
+# --- Restaurant detail (M4 — Google Places) ---------------------------------
+# A single photo is a backend URL the client can load directly; the Places key
+# never leaves the server (DESIGN §7). Every field is nullable because an
+# un-keyed or failed enrichment is a normal, supported state — see places.py.
+
+
+class PlaceReview(BaseModel):
+    author_name: str | None = None
+    rating: float | None = None
+    text: str | None = None
+    relative_time: str | None = None
+
+
+class PlacesEnrichment(BaseModel):
+    rating: float | None = None
+    user_rating_count: int | None = None
+    display_name: str | None = None
+    formatted_address: str | None = None
+    photos: list[str] = []          # backend photo URLs, keyless
+    opening_hours: list[str] = []
+    reviews: list[PlaceReview] = []
+    synced_at: str | None = None
+
+
+class RestaurantDetailOut(BaseModel):
+    restaurant: dict
+    # The full menu, each dish tagged with its safety tier so the detail screen
+    # can show the same verified/unverified badges as the cards (DESIGN §4).
+    menu: list[dict]
+    safe_dishes: list[SafeDish]
+    places: PlacesEnrichment
