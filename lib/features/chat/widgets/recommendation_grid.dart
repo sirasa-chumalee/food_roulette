@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/models/history.dart';
 import '../../../data/models/recommendation.dart';
+import '../providers/chat_provider.dart';
+import '../../history/services/history_buffer.dart';
 
-class RecommendationGrid extends StatelessWidget {
+class RecommendationGrid extends ConsumerWidget {
   final List<RecommendedRestaurant> restaurants;
 
   const RecommendationGrid({
@@ -12,13 +16,9 @@ class RecommendationGrid extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Strictly cap the display list to a maximum of 4 cards
-    final displayList = restaurants.take(4).toList();
-
-    if (displayList.isEmpty) {
-      return const SizedBox();
-    }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final displayedList = restaurants.take(4).toList();
+    if (displayedList.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -39,7 +39,7 @@ class RecommendationGrid extends StatelessWidget {
           GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
-            itemCount: displayList.length,
+            itemCount: displayedList.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               mainAxisSpacing: 12,
@@ -47,11 +47,8 @@ class RecommendationGrid extends StatelessWidget {
               childAspectRatio: .78,
             ),
             itemBuilder: (context, index) {
-              final restaurant = displayList[index];
-
-              return _RestaurantCard(
-                restaurant: restaurant,
-              );
+              final restaurant = displayedList[index];
+              return _RestaurantCard(restaurant: restaurant);
             },
           ),
         ],
@@ -60,27 +57,40 @@ class RecommendationGrid extends StatelessWidget {
   }
 }
 
-class _RestaurantCard extends StatelessWidget {
+class _RestaurantCard extends ConsumerWidget {
   final RecommendedRestaurant restaurant;
 
   const _RestaurantCard({
     required this.restaurant,
   });
 
+  void _onCardTap(BuildContext context, WidgetRef ref) {
+    final sessionId = ref.read(chatProvider).sessionId;
+    
+    // Pass restaurant name in context
+    ref.read(historyBufferProvider).track(
+      sessionId: sessionId,
+      restaurantId: restaurant.restaurantId,
+      actionType: HistoryActionType.click,
+      context: {
+        'name': restaurant.displayName,
+      },
+    );
+    context.push('/restaurant/${restaurant.restaurantId}');
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: () {
-        context.push('/restaurant/${restaurant.restaurantId}');
-      },
+      onTap: () => _onCardTap(context, ref),
       child: Ink(
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 83, 83, 83), // Dark card surface
+          color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: const Color.fromARGB(255, 92, 92, 92).withValues(alpha: .15),
+              color: Colors.black.withValues(alpha: .15),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -94,15 +104,12 @@ class _RestaurantCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(18),
                 ),
-                child: restaurant.photoUrl != null &&
-                        restaurant.photoUrl!.isNotEmpty
+                child: restaurant.photoUrl != null && restaurant.photoUrl!.isNotEmpty
                     ? Image.network(
                         restaurant.photoUrl!,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, index, _) {
-                          return _placeholder();
-                        },
+                        errorBuilder: (_, __, ___) => _placeholder(),
                       )
                     : _placeholder(),
               ),
@@ -121,7 +128,7 @@ class _RestaurantCard extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: Colors.white, // White text on dark card
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -129,7 +136,7 @@ class _RestaurantCard extends StatelessWidget {
                       children: [
                         const Icon(
                           Icons.star,
-                          color: Color.fromARGB(255, 241, 241, 241), // Darker monochrome star
+                          color: Color(0xFFB0B0B0),
                           size: 16,
                         ),
                         const SizedBox(width: 3),
@@ -138,7 +145,7 @@ class _RestaurantCard extends StatelessWidget {
                               ? restaurant.rating!.toStringAsFixed(1)
                               : "4.2",
                           style: const TextStyle(
-                            color: Color.fromARGB(255, 241, 241, 241),
+                            color: Color(0xFFCCCCCC),
                             fontSize: 12,
                           ),
                         ),
@@ -149,23 +156,20 @@ class _RestaurantCard extends StatelessWidget {
                       width: double.infinity,
                       child: FilledButton(
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 31, 31, 31), // Dark/Black button
+                          backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        onPressed: () {
-                          context.push(
-                              '/restaurant/${restaurant.restaurantId}');
-                        },
+                        onPressed: () => _onCardTap(context, ref),
                         child: const Text("View"),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -174,12 +178,12 @@ class _RestaurantCard extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      color: const Color.fromARGB(255, 216, 216, 216), // Dark placeholder background
+      color: const Color(0xFF2A2A2A),
       child: const Center(
         child: Icon(
           Icons.restaurant,
           size: 45,
-          color: Color.fromARGB(255, 112, 112, 112),
+          color: Color(0xFF666666),
         ),
       ),
     );

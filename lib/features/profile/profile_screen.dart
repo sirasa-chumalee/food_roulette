@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../state/providers.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/models/user_preferences.dart';
+import '../../state/providers.dart';
+import '../history/providers/history_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -40,8 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Center(
               child: CircleAvatar(
                 radius: 80,
-                backgroundColor: Colors.black, // Black circle background
-                foregroundColor: Colors.white, // White icon inside
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
                 child: Icon(Icons.person, size: 80),
               ),
             ),
@@ -101,6 +102,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 1. Preference View Tab
+// ---------------------------------------------------------------------------
+
 class PreferenceView extends ConsumerWidget {
   const PreferenceView({super.key});
 
@@ -140,20 +145,17 @@ class PreferenceView extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // WRAP WITH SPREAD-OUT SPACING & MARGINS
               Wrap(
-                spacing: 8.0, // Horizontal space between chips
-                runSpacing: 12.0, // Vertical space between rows
+                spacing: 8.0,
+                runSpacing: 12.0,
                 children: availableAllergens.map((allergen) {
                   final isSelected = hard.allergens.contains(allergen);
                   return Padding(
-                    // THIS FORCE-SEPARATES THE ROWS VERTICALLY
                     padding: const EdgeInsets.symmetric(
                       vertical: 4.0,
                       horizontal: 2.0,
                     ),
                     child: FilterChip(
-                      // Remove Flutter's invisible extra padding around tap targets
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       visualDensity: const VisualDensity(
                         horizontal: 0,
@@ -318,18 +320,109 @@ class PreferenceView extends ConsumerWidget {
   }
 }
 
-class HistoryView extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// 2. History View Tab (Unique Visited Places with Real Names)
+// ---------------------------------------------------------------------------
+
+class HistoryView extends ConsumerWidget {
   const HistoryView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Center(
-        child: Text(
-          'Recent Search History Go Here',
-          style: TextStyle(color: Colors.grey, fontSize: 16),
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(historyListProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Last 20 Recommended Places",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          historyAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: CircularProgressIndicator(color: Colors.black),
+              ),
+            ),
+            error: (err, _) => Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Error loading history: $err',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+            data: (items) {
+              if (items.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(
+                    child: Text(
+                      "No places viewed yet.",
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F2F2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.restaurant,
+                        size: 20,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    title: Text(
+                      item.restaurantName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Colors.black,
+                      ),
+                    ),
+                    subtitle: Text(
+                      item.ts.length >= 16
+                          ? "${item.ts.substring(0, 10)} ${item.ts.substring(11, 16)}"
+                          : item.ts,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey,
+                      size: 20,
+                    ),
+                    onTap: () {
+                      context.push('/restaurant/${item.restaurantId}');
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
     );
   }

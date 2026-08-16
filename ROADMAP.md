@@ -284,16 +284,16 @@ and captured in `chat_with_cards.json`. The on-device half waits on the FE check
 Deliberately placed **before** Places: it's cheap, needs no API key, and immediately improves results.
 
 **Backend**
-- [ ] `POST /history` logging `IMPRESSION | CLICK | SPIN | REJECTION` with session id + conversational context
-- [ ] Accept **batched** events (FE buffers impressions; one request per N events or per few seconds)
-- [ ] Session-scoped rejection penalty feeding `ranking.py` — a rejected restaurant is down-ranked
+- [x] `POST /history` logging `IMPRESSION | CLICK | SPIN | REJECTION` with session id + conversational context
+- [x] Accept **batched** events (FE buffers impressions; one request per N events or per few seconds)
+- [x] Session-scoped rejection penalty feeding `ranking.py` — a rejected restaurant is down-ranked
       for the rest of the session
-- [ ] `GET /history?user_id=` for the History screen
+- [x] `GET /history?user_id=` for the History screen
 
 **Frontend**
-- [ ] Fire-and-forget event buffer (never blocks or fails a UI interaction)
-- [ ] Impression tracking on card visibility; click on detail open; rejection on dismiss
-- [ ] History screen
+- [x] Fire-and-forget event buffer (never blocks or fails a UI interaction)
+- [x] Impression tracking on card visibility; click on detail open
+- [x] History screen
 
 **DoD:** rejecting a card in-session measurably demotes it on the next recommendation call.
 
