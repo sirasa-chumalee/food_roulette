@@ -38,6 +38,9 @@ _PLACES_MIGRATIONS: dict[str, str] = {
     "photo_refs_json": "TEXT",
     "hours_json": "TEXT",
     "reviews_json": "TEXT",
+    # Human-written description (search/display signal). Not Places, but it's
+    # added the same lazy way for an existing dev DB.
+    "description": "TEXT",
 }
 
 

@@ -14,8 +14,9 @@ CREATE TABLE IF NOT EXISTS restaurants (
     latitude           REAL,
     longitude          REAL,
     price_band         TEXT,                      -- null today; derivable from menu prices
-    is_halal_certified INTEGER,                   -- 0 = placeholder; do NOT filter on yet
-    has_parking        INTEGER,                   -- 2 = "unknown" sentinel
+        is_halal_certified INTEGER,                   -- 0 = placeholder; do NOT filter on yet
+        has_parking        INTEGER,                   -- 2 = "unknown" sentinel
+        description        TEXT,                      -- human-written, shown on detail; SEARCH signal only
 
     -- Cached Google Places enrichment (M4; null until synced)
         rating              REAL,

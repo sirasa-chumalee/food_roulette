@@ -34,9 +34,10 @@ RESTAURANT_COLUMNS = [
     "latitude",
     "longitude",
     "price_band",
-    "is_halal_certified",
-    "has_parking",
-]
+        "is_halal_certified",
+        "has_parking",
+        "description",  # human-written; search+display signal, never safety
+    ]
 
 MENU_COLUMNS = [
     "id",
