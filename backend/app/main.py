@@ -26,6 +26,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import __version__, config, db, ranking, schemas
 from . import filter as safety_filter  # `filter` shadows the builtin otherwise
 from . import places
+from . import search
 from .llm import extract as llm_extract
 from .llm import narrate as llm_narrate
 
@@ -707,12 +708,17 @@ def _recommend_for(
     hard: schemas.HardConstraints,
     soft: schemas.SoftPreferences,
     session_id: str | None = None,
+    craving_phrases: list[str] | None = None,
 ) -> tuple[list[schemas.RecommendedRestaurant], bool]:
     """Filter, rank, and shape into cards. Shared by /recommend and /chat.
 
     Chat gets its recommendations from this same function on purpose: there is
     one safety path, and adding a conversation in front of it must not create a
     second one.
+
+    ``craving_phrases`` come from the chat message's parsed cravings/facility
+    needs (search.py). They are a ranking-only bonus: a matching restaurant is
+    moved up, never in or out of the safe set.
     """
     # Hard filter first, in SQL. Everything after this line is ordering.
     surviving = safety_filter.safe_dishes(conn, hard)
@@ -729,11 +735,15 @@ def _recommend_for(
     ]
 
     rejected = _session_rejections(conn, session_id)
+    craving_matched = (
+        search.match_restaurant_ids(conn, craving_phrases) if craving_phrases else set()
+    )
     ranked = ranking.rank(
         candidates,
         soft,
         seed=body.seed,
         rejected_restaurant_ids=rejected,
+        craving_matched=craving_matched,
     )
 
     # Computed over the whole safe set, not the truncated page: the banner asks
@@ -787,9 +797,13 @@ def chat(body: schemas.ChatIn) -> schemas.ChatOut:
 
         hard, soft = _load_preferences(conn, body.user_id)
         degraded: str | None = None
+        # Cravings/facility needs parsed out of this message. Empty when Gemini
+        # failed or said nothing — search then contributes no ranking signal.
+        craving_phrases: list[str] = []
 
         try:
             extracted = llm_extract.extract(body.text)
+            craving_phrases = list(extracted.cravings) + list(extracted.facility_needs)
             # Union, never replace: the message can add restrictions, not lift
             # the ones already saved.
             hard = llm_extract.union_hard_constraints(hard, extracted.hard_constraints)
@@ -800,7 +814,7 @@ def chat(body: schemas.ChatIn) -> schemas.ChatOut:
             degraded = "LLM_UNAVAILABLE"
 
         recommendations, fallback = _recommend_for(
-            conn, body, hard, soft, session_id=session_id
+            conn, body, hard, soft, session_id=session_id, craving_phrases=craving_phrases
         )
         # Read while the connection is open: the grounding check below needs to
         # know which real venues we chose *not* to return.

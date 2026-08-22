@@ -350,6 +350,47 @@ def test_extraction_failure_does_not_attempt_narration(client, user_id, stub_llm
     assert not [c for c in calls if c[0] == "narrate"]
 
 
+def test_parsed_cravings_drive_the_search_match(client, user_id, stub_llm, monkeypatch):
+    """/chat hands the message's cravings/facility needs to the FTS matcher.
+
+    This is the seam that turns a wish like \"salad, hot\" into a ranking boost:
+    the parsed phrases must reach `search.match_restaurant_ids`. The ordering
+    bonus itself is pinned in test_ranking_craving.py — here we prove the value
+    actually flows end-to-end through /chat.
+    """
+    seen: dict = {}
+
+    def _fake_match(conn, phrases):
+        seen["phrases"] = phrases
+        return set()
+
+    monkeypatch.setattr("app.main.search.match_restaurant_ids", _fake_match)
+    stub_llm(
+        extract=llm_extract.ExtractResult(
+            cravings=["salad"],
+            facility_needs=["parking"],
+        )
+    )
+    chat(client, user_id, text="crunchy salad, and parking please")
+
+    assert seen == {"phrases": ["salad", "parking"]}
+
+
+def test_degraded_chat_skips_search_and_still_returns_cards(
+    client, user_id, stub_llm, monkeypatch
+):
+    """Gemini down → no cravings → matcher never called, but cards still come back."""
+    hits: list = []
+    monkeypatch.setattr(
+        "app.main.search.match_restaurant_ids",
+        lambda conn, phrases: hits.append(list(phrases)) or set(),
+    )
+    stub_llm(extract=llm_extract.ExtractUnavailable("down"))
+    body = chat(client, user_id)
+    assert body["recommendations"]
+    assert hits == []
+
+
 # ---------------------------------------------------------------------------
 # 5. Contract shape
 # ---------------------------------------------------------------------------
