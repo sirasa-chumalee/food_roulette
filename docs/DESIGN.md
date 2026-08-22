@@ -208,6 +208,13 @@ Applied to the already-safe set (never excludes on safety):
 - diet style (keto/low-carb bias) as a soft score
 - distance from `latitude/longitude` (already local — no API call) and rating
 - history penalty: down-rank restaurants rejected earlier in the session
+- craving match: `cravings`/`facility_needs` parsed from the chat message are
+  matched against a full-text (FTS5) index of each restaurant's names,
+  human-written `description`, and dish names. A match adds a small
+  `CRAVING_BONUS` (weighted far below the verified-safety bonus) so a venue that
+  actually fits the craving outranks an equal-safety one that doesn't. Pure
+  ordering — a description can never put a restaurant *into* or *out of* the
+  safe set, and it is never a safety claim.
 
 Returns top-N restaurants with a score; ties broken randomly (seed of the later
 roulette widget).
@@ -261,8 +268,10 @@ cause an allergy error or hallucinate a restaurant:
 | GET | `/restaurants/{id}` | full detail incl. Places enrichment + safe dishes |
 | POST | `/history` | log `IMPRESSION\|CLICK\|SPIN\|REJECTION` |
 
-`recommendation` object → `{restaurant_id, name, rating, photo_url, distance_m,
-price_tier, safe_dishes:[{name_th, price_thb, spicy_level}], excluded_count}`.
+`recommendation` object → `{restaurant_id, name, rating, photo_url, description,
+distance_m, price_tier, safe_dishes:[{name_th, price_thb, spicy_level}],
+excluded_count}`. `description` is display + search text and is never read by the
+safety filter.
 
 WebSocket variant of `/chat` is optional for streaming the narration later.
 
