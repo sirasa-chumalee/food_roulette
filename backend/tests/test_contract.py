@@ -16,6 +16,7 @@ RECOMMENDATION_KEYS = {
     "price_tier",
     "rating",
     "photo_url",
+    "description",
     "safety_tier",
     "needs_ack",
     "ack_reason",

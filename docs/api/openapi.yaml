@@ -967,6 +967,11 @@ components:
           - type: string
           - type: 'null'
           title: Photo Url
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
         safety_tier:
           type: string
           enum:
@@ -1008,7 +1013,12 @@ components:
 
         `rating` and `photo_url` stay null until M4 wires up Google Places; the
 
-        client must render gracefully without them from day one.'
+        client must render gracefully without them from day one.
+
+
+        `description` is the human-written, searchable blurb (display only — it is
+
+        never read by filter.py, so it can never become a safety claim).'
     RestaurantDetailOut:
       properties:
         restaurant:

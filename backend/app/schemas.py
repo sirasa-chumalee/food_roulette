@@ -84,6 +84,9 @@ class RecommendedRestaurant(BaseModel):
 
     `rating` and `photo_url` stay null until M4 wires up Google Places; the
     client must render gracefully without them from day one.
+
+    `description` is the human-written, searchable blurb (display only — it is
+    never read by filter.py, so it can never become a safety claim).
     """
 
     restaurant_id: str
@@ -95,6 +98,7 @@ class RecommendedRestaurant(BaseModel):
     price_tier: str | None
     rating: float | None = None
     photo_url: str | None = None
+    description: str | None = None
     safety_tier: Literal["verified", "unverified"]
     needs_ack: bool
     ack_reason: str | None = None

@@ -894,6 +894,7 @@ def _to_card(
         # rating / photo_url stay null until M4 (Places).
         rating=None,
         photo_url=None,
+        description=restaurant.get("description"),
         safety_tier=dishes.safety_tier,
         needs_ack=dishes.needs_ack,
         ack_reason=_ack_reason(hard) if dishes.needs_ack else None,

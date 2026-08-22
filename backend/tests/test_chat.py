@@ -395,6 +395,27 @@ def test_degraded_chat_skips_search_and_still_returns_cards(
 # 5. Contract shape
 # ---------------------------------------------------------------------------
 
+def test_recommendations_carry_the_human_description(conn, client, user_id, stub_llm):
+    """The description rides along on the card so the client can show it.
+
+    Display-only: asserting it is simply a passthrough of the stored column.
+    filter.py never reads it, which is the whole safety guarantee — that is
+    asserted structurally (the filter touches menu_items only) rather than
+    listed again here.
+    """
+    stub_llm(extract=llm_extract.ExtractResult())
+    body = chat(client, user_id)
+    assert body["recommendations"]
+
+    first = body["recommendations"][0]
+    rid = first["restaurant_id"]
+    stored = conn.execute(
+        "SELECT description FROM restaurants WHERE id = ?;", (rid,)
+    ).fetchone()["description"]
+    assert first["description"] == stored
+
+
+
 
 def test_response_matches_the_chat_contract(client, user_id, stub_llm):
     stub_llm(extract=llm_extract.ExtractResult())

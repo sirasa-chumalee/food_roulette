@@ -80,6 +80,16 @@ class SafetyRestaurantCard extends StatelessWidget {
                 rec.displayName,
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
+              if (rec.description != null && rec.description!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    rec.description!,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               if (rec.safeDishes.isNotEmpty)
                 Text(
                   rec.safeDishes.map((d) => d.nameTh ?? d.nameEn ?? '').join(', '),

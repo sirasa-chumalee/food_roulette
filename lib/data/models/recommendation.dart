@@ -37,6 +37,7 @@ class RecommendedRestaurant {
   final String? priceTier;
   final double? rating;
   final String? photoUrl;
+  final String? description;
   final String safetyTier; // "verified" | "unverified"
   final bool needsAck;
   final String? ackReason;
@@ -53,6 +54,7 @@ class RecommendedRestaurant {
     this.priceTier,
     this.rating,
     this.photoUrl,
+    this.description,
     required this.safetyTier,
     required this.needsAck,
     this.ackReason,
@@ -82,6 +84,7 @@ class RecommendedRestaurant {
     priceTier: json['price_tier'],
     rating: parseRating(json['rating'] ?? json['stars'] ?? json['score']),
     photoUrl: json['photo_url'],
+    description: json['description'],
     safetyTier: json['safety_tier'] ?? 'unverified',
     needsAck: json['needs_ack'] ?? false,
     ackReason: json['ack_reason'],
