@@ -68,6 +68,17 @@ CREATE TABLE IF NOT EXISTS menu_items (
 CREATE INDEX IF NOT EXISTS idx_menu_rid        ON menu_items(restaurant_id);
 CREATE INDEX IF NOT EXISTS idx_menu_confidence ON menu_items(confidence);
 
+-- Full-text search index over restaurant names + descriptions + dish names.
+-- One column (`body`) is the concatenated searchable text; `id` is the FK back
+-- to restaurants (UNINDEXED = it isn't tokenized, just stored). Rebuilt by
+-- ingest.py on every run (`search.build_index`), since the reference tables it
+-- mirrors are re-created each ingest. FTS5 ships with Python's sqlite3.
+CREATE VIRTUAL TABLE IF NOT EXISTS restaurant_fts USING fts5(
+    id UNINDEXED,
+    body,
+    tokenize='unicode61'
+);
+
 -- ---------------------------------------------------------------------------
 -- User data (persists across re-ingests — NEVER dropped by ingest.py)
 -- ---------------------------------------------------------------------------

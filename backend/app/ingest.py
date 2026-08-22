@@ -23,6 +23,7 @@ import sqlite3
 from pathlib import Path
 
 from . import config, db, pricing
+from . import search
 
 # Column order used for the INSERT statements. Kept explicit so a change to the
 # JSON key order never silently shifts values into the wrong column.
@@ -34,10 +35,10 @@ RESTAURANT_COLUMNS = [
     "latitude",
     "longitude",
     "price_band",
-        "is_halal_certified",
-        "has_parking",
-        "description",  # human-written; search+display signal, never safety
-    ]
+    "is_halal_certified",
+    "has_parking",
+    "description",  # human-written; search+display signal, never safety
+]
 
 MENU_COLUMNS = [
     "id",
@@ -124,6 +125,11 @@ def ingest(conn: sqlite3.Connection, data_dir: Path) -> dict:
     # `price_band` arrives NULL for all 50 rows, so we derive it here — offline,
     # from the menu we just loaded, rather than at request time (DESIGN §7).
     priced = pricing.derive_price_bands(conn)
+
+    # Rebuild the full-text index over names + descriptions + dish names. Must
+    # run after both reference tables are loaded (search.build_index mirrors
+    # them), and before the orphan check below so the summary stays honest.
+    search.build_index(conn)
 
     # Integrity check: no menu row should reference a missing restaurant.
     orphans = conn.execute(
