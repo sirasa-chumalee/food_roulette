@@ -5,8 +5,9 @@ import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
 import '../../../data/models/recommendation.dart';
+import '../../../core/constants.dart';
 
-const String baseUrl = 'http://127.0.0.1:8000';
+const String baseUrl = AppConfig.baseUrl;
 
 /// State for the chat screen.
 class ChatState {
@@ -91,6 +92,7 @@ class ChatNotifier extends Notifier<ChatState> {
           'session_id': state.sessionId,
           'user_id': '1',
           'text': trimmedText,
+          'limit': 4,
         }),
       );
 

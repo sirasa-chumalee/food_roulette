@@ -44,7 +44,7 @@ class RecommendationGrid extends ConsumerWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: .78,
+              childAspectRatio: .70,
             ),
             itemBuilder: (context, index) {
               final restaurant = displayedList[index];
@@ -154,16 +154,20 @@ class _RestaurantCard extends ConsumerWidget {
                     const Spacer(),
                     SizedBox(
                       width: double.infinity,
+                      height: 32,
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(double.infinity, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
                         onPressed: () => _onCardTap(context, ref),
-                        child: const Text("View"),
+                        child: const Text("View", style: TextStyle(fontSize: 12)),
                       ),
                     ),
                   ],

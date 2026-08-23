@@ -64,17 +64,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           return Column(
             children: [
               // 1. Initial 2x2 Recommendation Grid (Hidden once prompt is sent)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                child: chat.showInitialGrid
-                    ? RecommendationGrid(
-                        key: const ValueKey("initial-grid"),
-                        restaurants: initialData.recommendations,
-                      )
-                    : const SizedBox.shrink(),
+              // Flexible + SingleChildScrollView: the grid's natural height can
+              // exceed a short viewport (small window, landscape, a keyboard
+              // eating space) — this scrolls it internally instead of
+              // overflowing the Column below.
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 350),
+                        child: chat.showInitialGrid
+                            ? RecommendationGrid(
+                                key: const ValueKey("initial-grid"),
+                                restaurants: initialData.recommendations,
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      if (chat.showInitialGrid) const Divider(height: 1),
+                    ],
+                  ),
+                ),
               ),
-
-              if (chat.showInitialGrid) const Divider(height: 1),
 
               // 2. Chat Feed (Displays user prompts, bot responses, and updated recommendation cards)
               Expanded(
