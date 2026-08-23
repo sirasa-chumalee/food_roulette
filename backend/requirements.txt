@@ -7,3 +7,7 @@ pydantic==2.10.4
 # Chat (M2). Only imported when GEMINI_API_KEY is set — /chat degrades to the
 # plain recommendation path without it, so this is not required to boot.
 google-genai==2.8.0
+
+pyjwt
+argon2-cffi
+email-validator

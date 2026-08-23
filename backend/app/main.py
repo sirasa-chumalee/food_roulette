@@ -27,6 +27,7 @@ from . import __version__, config, db, ranking, schemas
 from . import filter as safety_filter  # `filter` shadows the builtin otherwise
 from . import places
 from . import search
+from . import auth
 from .llm import extract as llm_extract
 from .llm import narrate as llm_narrate
 
@@ -647,24 +648,91 @@ def _load_preferences(conn, user_id: str) -> tuple[schemas.HardConstraints, sche
     soft = schemas.SoftPreferences(**json.loads(row["soft_json"])) if row and row["soft_json"] else schemas.SoftPreferences()
     return hard, soft
 
-
-@app.post("/auth/session", response_model=schemas.SessionOut, status_code=201)
-def create_session(body: schemas.SessionIn) -> schemas.SessionOut:
-    """Fake login for now. Hands out an ID and a token, but nothing checks the
-    token yet — real login comes later."""
+@app.post("/auth/register", response_model=schemas.UserOut, status_code=201)
+def register(body: schemas.RegisterIn) -> schemas.UserOut:
     conn = db.connect()
+
     try:
+        existing_user = conn.execute(
+            "SELECT id FROM users WHERE email = ?;",
+            (body.email,),
+        ).fetchone()
+
+        if existing_user:
+            raise HTTPException(
+                status_code=409,
+                detail="Email is already registered",
+            )
+
         user_id = uuid.uuid4().hex
-        token = uuid.uuid4().hex
+        created_at = datetime.now(timezone.utc).isoformat()
+        password_hash = auth.hash_password(body.password)
+
         conn.execute(
-            "INSERT INTO users (id, display_name, created_at) VALUES (?, ?, ?);",
-            (user_id, body.display_name, datetime.now(timezone.utc).isoformat()),
+            """
+            INSERT INTO users
+                (id, email, password_hash, display_name, created_at)
+            VALUES (?, ?, ?, ?, ?);
+            """,
+            (
+                user_id,
+                body.email,
+                password_hash,
+                body.display_name,
+                created_at,
+            ),
         )
+
         conn.commit()
+
+        return schemas.UserOut(
+            id=user_id,
+            email=body.email,
+            display_name=body.display_name,
+            created_at=created_at,
+        )
+
     finally:
         conn.close()
-    return schemas.SessionOut(user_id=user_id, token=token, display_name=body.display_name)
 
+@app.post("/auth/login", response_model=schemas.TokenOut)
+def login(body: schemas.LoginIn) -> schemas.TokenOut:
+    conn = db.connect()
+
+    try:
+        user = conn.execute(
+            """
+            SELECT id, email, password_hash
+            FROM users
+            WHERE email = ?;
+            """,
+            (body.email,),
+        ).fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password",
+            )
+
+        if not auth.verify_password(
+            body.password,
+            user["password_hash"],
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password",
+            )
+
+        token = auth.create_access_token(user["id"])
+
+        return schemas.TokenOut(
+            access_token=token,
+            token_type="bearer",
+        )
+
+    finally:
+        conn.close()
 
 @app.get("/users/{user_id}/preferences", response_model=schemas.PreferencesOut)
 def get_preferences(user_id: str) -> schemas.PreferencesOut:

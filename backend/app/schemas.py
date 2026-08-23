@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 Allergen = Literal[
     "peanuts", "tree_nuts", "shellfish", "fish", "wheat", "soy", "milk", "eggs", "sesame"
@@ -50,14 +50,27 @@ class PreferencesOut(PreferencesIn):
     user_id: str
 
 
-class SessionIn(BaseModel):
-    display_name: str | None = None
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str
+    display_name: str
 
 
-class SessionOut(BaseModel):
-    user_id: str
-    token: str
-    display_name: str | None = None
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UserOut(BaseModel):
+    id: str
+    email: str
+    display_name: str | None
+    created_at: str
 
 
 class RecommendIn(BaseModel):

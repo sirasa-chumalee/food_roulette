@@ -84,9 +84,11 @@ CREATE VIRTUAL TABLE IF NOT EXISTS restaurant_fts USING fts5(
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS users (
-    id           TEXT PRIMARY KEY,
-    display_name TEXT,
-    created_at   TEXT
+    id            TEXT PRIMARY KEY,
+    email         TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name  TEXT,
+    created_at    TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS user_preferences (
