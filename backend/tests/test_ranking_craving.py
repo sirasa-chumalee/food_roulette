@@ -47,6 +47,20 @@ def test_craving_match_outranks_equal_non_match():
     assert ranked[1].score_breakdown.get("craving", 0) == 0
 
 
+def test_default_soft_preferences_apply_no_spice_penalty():
+    # A user who never saved a Profile gets SoftPreferences() with no args.
+    # spicy_tolerance must default to None ("no stated preference"), not some
+    # concrete level — otherwise every restaurant whose menu doesn't happen to
+    # hit that level (e.g. a dessert cafe with only spice_level=0 dishes) gets
+    # penalized by default, before the user ever asked for anything spicy.
+    soft = SoftPreferences()
+    assert soft.spicy_tolerance is None
+
+    mild_only = _candidate("tu_place_1")  # dish spicy_level=1 from _candidate()
+    ranked = ranking.rank([mild_only], soft)
+    assert ranked[0].score_breakdown["spice"] == 0.0
+
+
 def test_craving_bonus_never_edges_out_verified_safety():
     # A Tier-B restaurant with a craving match must NOT outrank a Tier-A
     # restaurant without one — the verified-safety bonus dominates on purpose.

@@ -29,9 +29,23 @@ _QUERY_SPECIAL = re.compile(r'["*<>()~\-\^]')
 # run, drop 1-char tokens (too noisy), then AND them.
 _TOKEN_SEP = re.compile(r"[^\w\u0080-\uFFFF]+")
 
+# SQL LIKE wildcards that must be neutralised in a phrase used as a literal
+# substring pattern (below), so a phrase like "50%" can't turn into a wildcard.
+_LIKE_SPECIAL = re.compile(r"[%_\\]")
+
+# Thai script block. Gates the LIKE fallback below to Thai phrases only — Latin
+# text already space-separates words, so FTS token matching is precise there
+# and a bare substring scan would reintroduce false positives like "ri" hitting
+# "riverside" (word-scoping is the whole point of the FTS path for those).
+_HAS_THAI = re.compile(r"[ก-๛]")
+
 
 def _escape(token: str) -> str:
     return '"' + _QUERY_SPECIAL.sub(" ", token) + '"'
+
+
+def _like_pattern(phrase: str) -> str:
+    return "%" + _LIKE_SPECIAL.sub(lambda m: "\\" + m.group(0), phrase) + "%"
 
 
 def build_index(conn: sqlite3.Connection) -> None:
@@ -64,25 +78,47 @@ def match_restaurant_ids(
 ) -> set[str]:
     """Restaurant ids whose index text matches the craving/facility phrases.
 
-    Each phrase is treated as an AND-of-tokens requirement (every word must be
-    present somewhere in the restaurant's material). A phrase with no usable
-    tokens is skipped — it contributes nothing but never errors. Returns an
-    empty set when nothing matches.
+    Each phrase is its own AND-of-tokens requirement (every word *in that
+    phrase* must be present somewhere in the restaurant's material) — a
+    restaurant is credited if it satisfies ANY one phrase. Phrases are
+    independent asks ("กาแฟ" and "ทำงาน" come from separate cravings /
+    facility needs), so ANDing across phrases would demand a restaurant's
+    text literally contain every unrelated word at once and match almost
+    nothing. A phrase with no usable tokens is skipped — it contributes
+    nothing but never errors. Returns an empty set when nothing matches.
+
+    Thai has no spaces between words, so a multi-word Thai craving like
+    "อาหารอินเดีย" (Indian food) arrives as *one* unsegmented token — FTS5's
+    unicode61 tokenizer only splits on whitespace/punctuation, so that token
+    can equal a restaurant's indexed word only by coincidence, even when the
+    exact substring is sitting right there in its description. For phrases
+    containing Thai script, a plain LIKE substring scan on the same indexed
+    text is a second, independent check that catches this case; its results
+    union with the FTS match rather than replacing it. This fallback is
+    scoped to Thai phrases only — Latin text already space-separates words,
+    so a bare substring scan there would reintroduce exactly the false
+    positive ("ri" hitting "riverside") the FTS word-scoping exists to avoid.
     """
     if not phrases:
         return set()
 
-    terms: list[str] = []
+    matched: set[str] = set()
     for phrase in phrases:
         tokens = [t for t in _TOKEN_SEP.split(phrase) if len(t) > 1]
-        terms.extend(_escape(t) for t in tokens)
+        if tokens:
+            match_expr = " AND ".join(_escape(t) for t in tokens)
+            rows = conn.execute(
+                "SELECT id FROM restaurant_fts WHERE restaurant_fts MATCH ?;",
+                (match_expr,),
+            ).fetchall()
+            matched.update(row["id"] for row in rows)
 
-    if not terms:
-        return set()
+        stripped = phrase.strip()
+        if len(stripped) > 1 and _HAS_THAI.search(stripped):
+            rows = conn.execute(
+                "SELECT id FROM restaurant_fts WHERE body LIKE ? ESCAPE '\\';",
+                (_like_pattern(stripped),),
+            ).fetchall()
+            matched.update(row["id"] for row in rows)
 
-    match_expr = " AND ".join(terms)
-    rows = conn.execute(
-        "SELECT id FROM restaurant_fts WHERE restaurant_fts MATCH ?;",
-        (match_expr,),
-    ).fetchall()
-    return {row["id"] for row in rows}
+    return matched

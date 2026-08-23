@@ -84,6 +84,54 @@ def test_match_across_multiple_phrases_is_and(tmp_path):
         conn.close()
 
 
+def test_separate_phrases_are_ored_not_anded(tmp_path):
+    conn = _conn(tmp_path)
+    try:
+        # A craving phrase and a facility-need phrase are independent asks
+        # (main.py concatenates extract.py's cravings + facility_needs into one
+        # list). Requiring both words to co-occur in one restaurant's text
+        # would demand "cafe" and "noodle" appear together, matching nothing —
+        # each phrase should instead credit whichever restaurant it hits on
+        # its own, and the results union.
+        ids = search.match_restaurant_ids(conn, ["cafe", "noodle"])
+        assert ids == {"tu_place_1", "tu_place_2"}
+    finally:
+        conn.close()
+
+
+def test_thai_compound_phrase_matches_via_substring_fallback(tmp_path):
+    conn = _conn(tmp_path)
+    try:
+        # Thai has no spaces between words, so a craving like "อาหารอินเดีย"
+        # (Indian food) arrives from extract.py as one glued token — FTS5's
+        # tokenizer can't split it, so the token match alone would miss a
+        # restaurant whose description literally contains that exact
+        # substring. The LIKE fallback must still find it.
+        restaurant_id = "tu_place_1"
+        conn.execute(
+            "UPDATE restaurants SET description = ? WHERE id = ?;",
+            ("เป็นร้านอาหารอินเดียต้นตำรับแท้ๆ ในราคานักศึกษา", restaurant_id),
+        )
+        search.build_index(conn)
+        ids = search.match_restaurant_ids(conn, ["อาหารอินเดีย"])
+        assert restaurant_id in ids
+    finally:
+        conn.close()
+
+
+def test_thai_fallback_does_not_apply_to_latin_phrases(tmp_path):
+    conn = _conn(tmp_path)
+    try:
+        # The substring fallback is scoped to phrases containing Thai script.
+        # A short Latin phrase must stay word-scoped via FTS only, or "ri"
+        # would substring-hit "riverside" the same way the guarded test above
+        # proves it must not.
+        ids = search.match_restaurant_ids(conn, ["ri"])
+        assert ids == set()
+    finally:
+        conn.close()
+
+
 def test_match_surfaces_dish_names_too(tmp_path):
     conn = _conn(tmp_path)
     try:

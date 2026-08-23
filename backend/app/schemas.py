@@ -35,7 +35,12 @@ class HardConstraints(BaseModel):
 
 
 class SoftPreferences(BaseModel):
-    spicy_tolerance: int = Field(3, ge=0, le=3)
+    # None means "no stated preference" — ranking.py's _spice_penalty treats
+    # None as zero penalty. A non-null default here would silently apply a
+    # spice constraint to every user who never touched the Profile screen,
+    # penalizing every mild-food restaurant (cafes, dessert places) by
+    # default even when nothing was ever asked for.
+    spicy_tolerance: int | None = Field(None, ge=0, le=3)
     price_tier: Literal["$", "$$", "$$$", "$$$$"] | None = None
     diet_style: Literal["keto", "low_carb", "mediterranean", "carnivore", "none"] = "none"
     wants_parking: bool = False
