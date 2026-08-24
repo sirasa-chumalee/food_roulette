@@ -1,8 +1,13 @@
 """Search: the FTS5 index built from descriptions must be queryable."""
 
 import json
+import uuid
 
-from app import db, ingest, search
+import pytest
+
+from app import config, db, ingest, search
+from app.llm import extract as llm_extract
+from app.llm import narrate as llm_narrate
 
 MENU = [
     {
@@ -140,3 +145,104 @@ def test_match_surfaces_dish_names_too(tmp_path):
         assert "tu_place_1" in ids
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Cuisine/craving search ("chinese food" bug report).
+#
+# No dish is cuisine-tagged, so a bare cuisine word like "chinese food" shares
+# no literal word with the Thai dish text and matches nothing on its own —
+# real Chinese-fusion restaurants exist (SEEFAH, TingTing) but search.py can't
+# find them from that word alone. Fixed at the extraction prompt (extract.py):
+# Gemini is asked to add real Thai dish/ingredient keywords whenever it detects
+# a cuisine craving, so search.py stays a plain deterministic matcher — no
+# hardcoded restaurant-to-cuisine table. Tests below prove two separate things:
+# 1) given the kind of keywords Gemini should produce, the existing matcher
+#    (unchanged) correctly finds the right restaurants, and 2) that value
+#    reaches an actual /chat response. Prompt compliance itself is only
+#    checkable against the real model — see the opt-in test at the bottom.
+# ---------------------------------------------------------------------------
+
+TU_RANGSIT = {"latitude": 14.0700, "longitude": 100.6040}
+
+# Verified Chinese-cuisine matches: SEEFAH/TingTing say so in their own
+# description; the other three serve wonton/roast-duck/dumpling dishes.
+CHINESE_IDS = {"tu_place_14", "tu_place_23", "tu_place_31", "tu_place_35", "tu_place_41"}
+CHINESE_KEYWORDS = ["เกี๊ยว", "หมูแดง", "เป็ดย่าง", "ติ่มซำ"]
+
+
+def test_decomposed_chinese_keywords_match_real_chinese_restaurants(conn):
+    """If Gemini follows the prompt and adds these keywords, they must resolve
+    to real restaurants — pins the matcher side of the fix, independent of
+    whether Gemini actually cooperates."""
+    matched = search.match_restaurant_ids(conn, CHINESE_KEYWORDS)
+    assert matched & CHINESE_IDS, f"{CHINESE_KEYWORDS!r} matched none of {CHINESE_IDS}"
+
+
+@pytest.mark.parametrize(
+    "keywords,expect_any_of",
+    [
+        (["ญี่ปุ่น", "ซูชิ", "ราเมน"], {"tu_place_28", "tu_place_38"}),
+        (["เกาหลี", "กิมจิ"], {"tu_place_32"}),
+        (["อิตาเลียน", "พาสต้า"], {"tu_place_48"}),
+        (["ทะเล", "กุ้ง", "หอย"], {"tu_place_1", "tu_place_31"}),
+    ],
+)
+def test_decomposed_keywords_match_a_real_restaurant_for_other_cuisines(
+    conn, keywords, expect_any_of
+):
+    matched = search.match_restaurant_ids(conn, keywords)
+    assert matched & expect_any_of, f"{keywords!r} matched none of {expect_any_of}"
+
+
+# --- Integration: prove the fix shows up in an actual /chat response, given
+# extraction output shaped like the new prompt asks for. Registers its own
+# user — the shared `user_id` fixture is broken (pre-existing, unrelated
+# `/auth/session` issue).
+
+
+@pytest.fixture()
+def qa_user_id(client) -> str:
+    email = f"qa-search-{uuid.uuid4().hex}@test.com"
+    response = client.post(
+        "/auth/register",
+        json={"email": email, "password": "hunter22", "display_name": "qa"},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+@pytest.mark.parametrize("text", ["I want chinese food", "อยากกินอาหารจีนอร่อยๆ"])
+def test_chinese_craving_surfaces_real_cards_through_chat(client, qa_user_id, monkeypatch, text):
+    """Given cravings shaped like the new prompt should produce, /chat must
+    rank real Chinese-cuisine restaurants to the top."""
+    cravings = ["chinese food", *CHINESE_KEYWORDS]
+    monkeypatch.setattr(
+        llm_extract, "extract", lambda t: llm_extract.ExtractResult(cravings=cravings)
+    )
+    monkeypatch.setattr(llm_narrate, "narrate", lambda t, cards: "ลองดูร้านพวกนี้นะคะ")
+
+    response = client.post(
+        "/chat",
+        json={"user_id": qa_user_id, "text": text, "limit": 5, **TU_RANGSIT},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    top_ids = [c["restaurant_id"] for c in body["recommendations"]]
+    hits = set(top_ids) & CHINESE_IDS
+    assert len(hits) >= 4, f"expected most of the top 5 to be Chinese-cuisine, got {top_ids}"
+
+
+# --- Opt-in live check: does the real model actually follow the new prompt
+# instruction? Only this test can answer that — everything above stubs
+# extraction, so it would pass even if Gemini ignored the instruction
+# entirely. Skipped unless a real key is set, and never runs by default.
+
+
+@pytest.mark.skipif(not config.GEMINI_API_KEY, reason="requires a real GEMINI_API_KEY")
+def test_real_model_adds_thai_keywords_for_a_cuisine_craving():
+    result = llm_extract.extract("I want chinese food")
+    assert any(search._HAS_THAI.search(c) for c in result.cravings), (
+        f"expected at least one Thai keyword among cravings, got {result.cravings!r}"
+    )

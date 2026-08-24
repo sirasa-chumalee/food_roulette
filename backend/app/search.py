@@ -39,6 +39,14 @@ _LIKE_SPECIAL = re.compile(r"[%_\\]")
 # "riverside" (word-scoping is the whole point of the FTS path for those).
 _HAS_THAI = re.compile(r"[ก-๛]")
 
+# Cuisine association ("chinese food" -> เกี๊ยว/หมูแดง/...) is not hardcoded
+# here. No dish has a cuisine tag, so a plain cuisine word shares no literal
+# word with the Thai dish text and would never match anything on its own —
+# extract.py's prompt instead asks Gemini to add real Thai dish/ingredient
+# keywords as extra cravings whenever it detects a cuisine craving. Those
+# keywords arrive in `phrases` like any other craving and are matched below
+# exactly the same way, so this module stays a plain deterministic matcher.
+
 
 def _escape(token: str) -> str:
     return '"' + _QUERY_SPECIAL.sub(" ", token) + '"'

@@ -75,6 +75,12 @@ Rules:
 - cravings are short free-text phrases ("noodles", "something light").
 - facility_needs are short free-text phrases ("parking", "quiet").
 - Thai and English are both expected. Keep cravings in the language written.
+- Restaurant menus in this app are written in Thai dish names, not cuisine
+  labels — if the message names a cuisine broadly ("chinese food", "seafood",
+  "อาหารเกาหลี"), also add 2-4 real Thai dish/ingredient words for that cuisine
+  as extra cravings entries (e.g. "chinese food" -> also add "เกี๊ยว", "หมูแดง",
+  "เป็ดย่าง"), so the search can find matching restaurants by their actual menu
+  text. Skip this when the craving is already a concrete dish, not a cuisine.
 
 Diner's message:
 """
