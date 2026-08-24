@@ -44,7 +44,7 @@ class RecommendationGrid extends ConsumerWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: .70,
+              childAspectRatio: .78,
             ),
             itemBuilder: (context, index) {
               final restaurant = displayedList[index];

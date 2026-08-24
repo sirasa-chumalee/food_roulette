@@ -68,25 +68,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               // exceed a short viewport (small window, landscape, a keyboard
               // eating space) — this scrolls it internally instead of
               // overflowing the Column below.
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 350),
-                        child: chat.showInitialGrid
-                            ? RecommendationGrid(
-                                key: const ValueKey("initial-grid"),
-                                restaurants: initialData.recommendations,
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                      if (chat.showInitialGrid) const Divider(height: 1),
-                    ],
-                  ),
-                ),
-              ),
+
+
+                      if (chat.showInitialGrid)
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 350),
+                          child: Column(
+                            key: const ValueKey("initial-grid"),
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              RecommendationGrid(restaurants: initialData.recommendations,),
+                              const Divider(height: 1,)
+                            ],
+                          ),
+                        ),
 
               // 2. Chat Feed (Displays user prompts, bot responses, and updated recommendation cards)
               Expanded(
