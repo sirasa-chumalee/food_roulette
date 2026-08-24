@@ -36,6 +36,7 @@ class RecommendedRestaurant {
   final double? distanceM;
   final String? priceTier;
   final double? rating;
+  final int? userRatingCount;
   final String? photoUrl;
   final String? description;
   final String safetyTier; // "verified" | "unverified"
@@ -53,6 +54,7 @@ class RecommendedRestaurant {
     this.distanceM,
     this.priceTier,
     this.rating,
+    this.userRatingCount,
     this.photoUrl,
     this.description,
     required this.safetyTier,
@@ -65,7 +67,10 @@ class RecommendedRestaurant {
   bool get isVerified => safetyTier == 'verified';
   String get displayName => nameTh ?? nameEn ?? 'Restaurant';
 
-  factory RecommendedRestaurant.fromJson(Map<String, dynamic> json) {
+  /// [baseUrl] resolves the backend's relative photo proxy path
+  /// (`/restaurants/{id}/photos/{i}`) into a URL the client can load
+  /// directly. The Places key never reaches the client (DESIGN §7).
+  factory RecommendedRestaurant.fromJson(Map<String, dynamic> json, [String baseUrl = '']) {
   // Safe rating parser handling int, double, or String
   double? parseRating(dynamic rawRating) {
     if (rawRating == null) return null;
@@ -73,6 +78,11 @@ class RecommendedRestaurant {
     if (rawRating is String) return double.tryParse(rawRating);
     return null;
   }
+
+  final rawPhoto = json['photo_url'] as String?;
+  final resolvedPhoto = (rawPhoto == null || rawPhoto.isEmpty)
+      ? null
+      : (rawPhoto.startsWith('http') ? rawPhoto : '$baseUrl$rawPhoto');
 
   return RecommendedRestaurant(
     restaurantId: json['restaurant_id'] ?? '',
@@ -83,7 +93,8 @@ class RecommendedRestaurant {
     distanceM: (json['distance_m'] as num?)?.toDouble(),
     priceTier: json['price_tier'],
     rating: parseRating(json['rating'] ?? json['stars'] ?? json['score']),
-    photoUrl: json['photo_url'],
+    userRatingCount: json['user_rating_count'] as int?,
+    photoUrl: resolvedPhoto,
     description: json['description'],
     safetyTier: json['safety_tier'] ?? 'unverified',
     needsAck: json['needs_ack'] ?? false,
@@ -105,10 +116,10 @@ class RecommendOut {
     required this.fallbackUsed,
   });
 
-  factory RecommendOut.fromJson(Map<String, dynamic> json) {
+  factory RecommendOut.fromJson(Map<String, dynamic> json, [String baseUrl = '']) {
     return RecommendOut(
       recommendations: (json['recommendations'] as List? ?? [])
-          .map((e) => RecommendedRestaurant.fromJson(e))
+          .map((e) => RecommendedRestaurant.fromJson(e, baseUrl))
           .toList(),
       fallbackUsed: json['fallback_used'] ?? false,
     );

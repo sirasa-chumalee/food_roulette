@@ -104,7 +104,7 @@ class ChatNotifier extends Notifier<ChatState> {
         final bool fallbackUsed = data['fallback_used'] ?? false;
 
         final restaurants = (data['recommendations'] as List? ?? [])
-            .map((r) => RecommendedRestaurant.fromJson(r))
+            .map((r) => RecommendedRestaurant.fromJson(r, baseUrl))
             .take(4)
             .toList();
 
@@ -185,7 +185,7 @@ class ChatNotifier extends Notifier<ChatState> {
         fallbackUsed = data['fallback_used'] ?? false;
 
         recs = (data['recommendations'] as List? ?? [])
-            .map((r) => RecommendedRestaurant.fromJson(r))
+            .map((r) => RecommendedRestaurant.fromJson(r, baseUrl))
             .take(4)
             .toList();
       }

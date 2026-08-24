@@ -15,6 +15,7 @@ RECOMMENDATION_KEYS = {
     "distance_m",
     "price_tier",
     "rating",
+    "user_rating_count",
     "photo_url",
     "description",
     "safety_tier",
@@ -74,7 +75,8 @@ def test_recommendation_object_matches_the_contract(client, user_id):
     card = body["recommendations"][0]
     assert set(card) == RECOMMENDATION_KEYS
     assert card["safety_tier"] in {"verified", "unverified"}
-    # Not enriched until M4 — the FE renders a placeholder for both.
+    # No GOOGLE_PLACES_API_KEY in the test environment, so enrichment_for
+    # degrades to nulls here — see test_places.py for the enriched case.
     assert card["rating"] is None
     assert card["photo_url"] is None
 

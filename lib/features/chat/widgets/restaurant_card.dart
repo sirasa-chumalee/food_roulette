@@ -34,13 +34,38 @@ class SafetyRestaurantCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (rec.photoUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      rec.photoUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                              ? child
+                              : Container(color: const Color.fromRGBO(220, 220, 220, 1)),
+                      errorBuilder: (_, __, ___) => Container(
+                        color: const Color.fromRGBO(220, 220, 220, 1),
+                        child: const Icon(Icons.restaurant, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ),
+              if (rec.photoUrl != null) const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       const Icon(Icons.star, size: 16, color: Color.fromARGB(255, 0, 0, 0)),
-                      Text(' ${rec.rating ?? 4.5}'),
+                      Text(
+                        rec.rating != null
+                            ? ' ${rec.rating!.toStringAsFixed(1)}'
+                                '${rec.userRatingCount != null ? ' (${rec.userRatingCount})' : ''}'
+                            : ' Not yet rated',
+                      ),
                     ],
                   ),
                   Container(

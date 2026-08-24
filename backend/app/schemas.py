@@ -100,8 +100,10 @@ class SafeDish(BaseModel):
 class RecommendedRestaurant(BaseModel):
     """The single object the whole UI is built from (ROADMAP §3.1).
 
-    `rating` and `photo_url` stay null until M4 wires up Google Places; the
-    client must render gracefully without them from day one.
+    `rating` / `user_rating_count` / `photo_url` come from Google Places
+    (M4, lazy + cached server-side — see places.py); they stay null when the
+    venue is un-keyed or the lookup failed, and the client must render
+    gracefully without them.
 
     `description` is the human-written, searchable blurb (display only — it is
     never read by filter.py, so it can never become a safety claim).
@@ -115,6 +117,7 @@ class RecommendedRestaurant(BaseModel):
     distance_m: float | None
     price_tier: str | None
     rating: float | None = None
+    user_rating_count: int | None = None
     photo_url: str | None = None
     description: str | None = None
     safety_tier: Literal["verified", "unverified"]

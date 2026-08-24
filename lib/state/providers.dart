@@ -88,6 +88,7 @@ class RecommendationsNotifier extends AsyncNotifier<RecommendOut> {
       if (response.statusCode == 200) {
         return RecommendOut.fromJson(
           jsonDecode(response.body),
+          baseUrl,
         );
       }
 

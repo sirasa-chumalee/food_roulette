@@ -818,7 +818,7 @@ def _recommend_for(
     # "did anything verified survive the filter?", which `limit` can't change.
     fallback = safety_filter.fallback_used(surviving)
 
-    return [_to_card(c, hard) for c in ranked[: body.limit]], fallback
+    return [_to_card(conn, c, hard) for c in ranked[: body.limit]], fallback
 
 
 @app.post("/recommend", response_model=schemas.RecommendOut)
@@ -945,11 +945,21 @@ def _distance_to(restaurant: dict, body: schemas.RecommendIn | schemas.ChatIn) -
 
 
 def _to_card(
-    candidate: ranking.Candidate, hard: schemas.HardConstraints
+    conn, candidate: ranking.Candidate, hard: schemas.HardConstraints
 ) -> schemas.RecommendedRestaurant:
-    """Shape one ranked candidate into the wire object (ROADMAP §3.1)."""
+    """Shape one ranked candidate into the wire object (ROADMAP §3.1).
+
+    Only the page actually returned (`ranked[:limit]`) reaches here, so this
+    triggers at most `limit` lazy Places lookups per request — see
+    `places.enrichment_for` for the cache/TTL behavior. A failed or un-keyed
+    lookup returns None and the card just renders without a photo/rating,
+    same as any other degraded Places state (DESIGN §7).
+    """
     restaurant = candidate.restaurant
     dishes = candidate.dishes
+
+    enrichment = places.enrichment_for(conn, restaurant["id"])
+    photos = places.photo_urls(conn, restaurant["id"]) if enrichment else []
 
     return schemas.RecommendedRestaurant(
         restaurant_id=restaurant["id"],
@@ -959,9 +969,9 @@ def _to_card(
         longitude=restaurant.get("longitude"),
         distance_m=candidate.distance_m,
         price_tier=restaurant.get("price_band"),
-        # rating / photo_url stay null until M4 (Places).
-        rating=None,
-        photo_url=None,
+        rating=enrichment.rating if enrichment else None,
+        user_rating_count=enrichment.user_rating_count if enrichment else None,
+        photo_url=photos[0] if photos else None,
         description=restaurant.get("description"),
         safety_tier=dishes.safety_tier,
         needs_ack=dishes.needs_ack,
