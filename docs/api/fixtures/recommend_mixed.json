@@ -1,84 +1,86 @@
 {
   "recommendations": [
     {
-      "restaurant_id": "tu_place_2",
-      "name_th": "ครัวแม่หมู มธ.",
+      "restaurant_id": "tu_place_50",
+      "name_th": "S.O.L.A.R Café",
       "name_en": null,
-      "latitude": 14.0651862,
-      "longitude": 100.5964224,
-      "distance_m": 976.9994266763408,
-      "price_tier": "$",
+      "latitude": 14.0697039,
+      "longitude": 100.6013648,
+      "distance_m": 286.1308908870083,
+      "price_tier": "$$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
-      "description": "เป็นร้านอาหารตามสั่งชื่อดังและเป็นพิกัดลับขวัญใจนักศึกษา ตั้งอยู่บริเวณหลังมหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต (ฝั่งเชียงราก) ใต้หอพักสิทธิ โดดเด่นเรื่องอาหารใต้รสชาติจัดจ้าน ใช้วัตถุดิบคุณภาพดี และให้ปริมาณที่อิ่มคุ้มค่า",
+      "description": "คาเฟ่ต้นแบบรักษ์โลกแห่งแรกใน มหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต โดดเด่นด้วยการใช้พลังงานไฟฟ้าจากแผงโซลาร์เซลล์ (Solar Panel) ที่ติดตั้งบนหลังคานำมาหมุนเวียนใช้ภายในร้านทั้งหมด. ตัวร้านตั้งอยู่ในโซนสีเขียว บรรยากาศร่มรื่น เงียบสงบ เป็นเหมือนที่พักผ่อนลับ ๆ ของนักศึกษาและบุคลากรที่ต้องการมานั่งจิบกาแฟ ทานอาหารปลอดสารพิษ หรือนั่งทำงานในบรรยากาศเป็นกันเอง",
       "safety_tier": "verified",
       "needs_ack": false,
       "ack_reason": null,
-      "excluded_count": 18,
+      "excluded_count": 17,
       "safe_dishes": [
         {
-          "id": 33,
-          "name_th": "ข้าวผัดขี้เมา",
+          "id": 1240,
+          "name_th": "สปาเก็ตตี้ซอสมะเขือเทศ",
           "name_en": null,
-          "price_thb": 50.0,
-          "spicy_level": 1,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 38,
-          "name_th": "ข้าวผัดผงกะหรี่",
-          "name_en": null,
-          "price_thb": 55.0,
+          "price_thb": 139.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         },
         {
-          "id": 42,
-          "name_th": "ข้าวไข่ยัดไส้",
+          "id": 1243,
+          "name_th": "ซีซาร์สลัด",
           "name_en": null,
-          "price_thb": 60.0,
+          "price_thb": 139.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 1245,
+          "name_th": "เฟรนช์ฟรายส์",
+          "name_en": null,
+          "price_thb": 79.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         }
       ]
     },
     {
-      "restaurant_id": "tu_place_41",
-      "name_th": "ออนเซ็น (กรีนแคนทีน) เอ็กซ์เพรส",
+      "restaurant_id": "tu_place_43",
+      "name_th": "Hotto Bun ม.ธรรมศาสตร์ รังสิต",
       "name_en": null,
-      "latitude": 14.0733468,
-      "longitude": 100.6011404,
-      "distance_m": 483.3460908555433,
+      "latitude": 14.0692159,
+      "longitude": 100.6010352,
+      "distance_m": 331.4537672611792,
       "price_tier": "$$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
-      "description": "เป็นร้านอาหารจานด่วนสไตล์ญี่ปุ่นและเกาหลียอดนิยมของนักศึกษา ม.ธรรมศาสตร์ ศูนย์รังสิต. ร้านนี้ตอบโจทย์เรื่องความสะดวกรวดเร็ว ปริมาณที่อิ่มคุ้มค่า และราคาที่เป็นมิตรต่อกระเป๋าสตางค์ของนักศึกษาอย่างมาก",
+      "description": "เป็นร้านอาหารกึ่งคาเฟ่สไตล์ญี่ปุ่นยอดนิยมที่ตั้งอยู่ภายในรั้วมหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต โซนสนามกีฬา (ข้างยิม 7 และติดกับสนามฟุตบอล Flick). ร้านนี้ขึ้นชื่อเรื่องเมนู \"บัน\" (Bao Burger) หรือเบอร์เกอร์แป้งหมั่นโถวสไตล์ญี่ปุ่น-ไต้หวันเนื้อนุ่มสูตรเฉพาะ ผสานเข้ากับบรรยากาศร้านสีขาวมินิมอล แอร์เย็นฉ่ำ ที่เป็นทั้งที่กินข้าวและพื้นที่นั่งทำงานของเหล่านักศึกษา แถมยังเป็นร้านแบบ Pet-Friendly ที่สามารถพาสัตว์เลี้ยงเข้าได้ทุกโซนอีกด้วย",
       "safety_tier": "verified",
       "needs_ack": false,
       "ack_reason": null,
-      "excluded_count": 16,
+      "excluded_count": 15,
       "safe_dishes": [
         {
-          "id": 1006,
-          "name_th": "ข้าวสไปซี่ดงบุริไข่ข้น",
+          "id": 1056,
+          "name_th": "เชคฟรายส์",
           "name_en": null,
-          "price_thb": 99.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 1012,
-          "name_th": "ราเมนเกี๊ยวซ่า",
-          "name_en": null,
-          "price_thb": 89.0,
+          "price_thb": 69.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         },
         {
-          "id": 1015,
-          "name_th": "เฟรนฟรายชีส",
+          "id": 1058,
+          "name_th": "ดังโงะสามสี",
           "name_en": null,
-          "price_thb": 79.0,
+          "price_thb": 59.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 1059,
+          "name_th": "กาแฟส้มยูซุ",
+          "name_en": null,
+          "price_thb": 75.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         }
@@ -93,6 +95,7 @@
       "distance_m": 491.71128819799554,
       "price_tier": "$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
       "description": "อาหารตามสั่งยอดนิยมของเด็ก มธ. ที่เน้นเสิร์ฟเร็ว ให้ปริมาณเยอะจุใจ ควงตะหลิวผัดกะเพราและพริกแกงรสเผ็ดจัดจ้านเข้มข้นถึงใจพร้อมกลิ่นคั่วกระทะหอมเตะจมูก",
       "safety_tier": "unverified",

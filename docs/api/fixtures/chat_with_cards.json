@@ -1,134 +1,137 @@
 {
-  "reply": "ลองดู ครัวแม่หมู มธ. หรือ S.O.L.A.R Café ดูไหมคะ สองร้านนี้มีเมนูเผ็ดที่ไม่มีหมูอยู่หลายอย่างเลย",
+  "reply": "ลองดู Sister หรือ Swan Lake ดูไหมคะ สองร้านนี้มีเมนูเผ็ดที่ไม่มีหมูอยู่หลายอย่างเลย",
   "recommendations": [
     {
-      "restaurant_id": "tu_place_2",
-      "name_th": "ครัวแม่หมู มธ.",
+      "restaurant_id": "tu_place_24",
+      "name_th": "Sister",
       "name_en": null,
-      "latitude": 14.0651862,
-      "longitude": 100.5964224,
-      "distance_m": 976.9994266763408,
+      "latitude": 14.066322,
+      "longitude": 100.6065309,
+      "distance_m": 491.71128819799554,
       "price_tier": "$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
-      "description": "เป็นร้านอาหารตามสั่งชื่อดังและเป็นพิกัดลับขวัญใจนักศึกษา ตั้งอยู่บริเวณหลังมหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต (ฝั่งเชียงราก) ใต้หอพักสิทธิ โดดเด่นเรื่องอาหารใต้รสชาติจัดจ้าน ใช้วัตถุดิบคุณภาพดี และให้ปริมาณที่อิ่มคุ้มค่า",
+      "description": "อาหารตามสั่งยอดนิยมของเด็ก มธ. ที่เน้นเสิร์ฟเร็ว ให้ปริมาณเยอะจุใจ ควงตะหลิวผัดกะเพราและพริกแกงรสเผ็ดจัดจ้านเข้มข้นถึงใจพร้อมกลิ่นคั่วกระทะหอมเตะจมูก",
       "safety_tier": "verified",
       "needs_ack": false,
       "ack_reason": null,
       "excluded_count": 7,
       "safe_dishes": [
         {
-          "id": 29,
-          "name_th": "ข้าวต้มยำกุ้ง",
-          "name_en": null,
-          "price_thb": 70.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 33,
-          "name_th": "ข้าวผัดขี้เมา",
+          "id": 578,
+          "name_th": "ข้าวปลากรอบผัดพริกเกลือ",
           "name_en": null,
           "price_thb": 50.0,
-          "spicy_level": 1,
+          "spicy_level": 2,
           "safety_tier": "verified"
         },
         {
-          "id": 35,
-          "name_th": "ข้าวไข่ยั่วกุ้ง",
+          "id": 581,
+          "name_th": "ข้าวยำปลาดุกฟู",
           "name_en": null,
-          "price_thb": 65.0,
+          "price_thb": 50.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 584,
+          "name_th": "ตำทะเล",
+          "name_en": null,
+          "price_thb": 80.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        }
+      ]
+    },
+    {
+      "restaurant_id": "tu_place_1",
+      "name_th": "Swan Lake",
+      "name_en": null,
+      "latitude": 14.0650007,
+      "longitude": 100.5976192,
+      "distance_m": 884.6964170854549,
+      "price_tier": "$$$$",
+      "rating": null,
+      "user_rating_count": null,
+      "photo_url": null,
+      "description": "เป็นร้านอาหารไทยและซีฟู้ดชื่อดัง ตั้งอยู่บนถนนเชียงราก ฝั่งตรงข้ามมหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต เป็นร้านอาหารไทยและซีฟู้ดชื่อดัง ตั้งอยู่บนถนนเชียงราก ฝั่งตรงข้ามมหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต (เยื้องกับศูนย์กีฬาธรรมศาสตร์ และอยู่ถัดจากอาคาร TU Dome Plaza ไปประมาณ 100 เมตร) จุดเด่นของร้านคือมีแพลอยน้ำบรรยากาศดี มีหงส์ว่ายน้ำรอบๆ สระ เหมาะสำหรับการมานั่งชิล ทานอาหารกับครอบครัว หรือจัดเลี้ยง",
+      "safety_tier": "verified",
+      "needs_ack": false,
+      "ack_reason": null,
+      "excluded_count": 7,
+      "safe_dishes": [
+        {
+          "id": 1,
+          "name_th": "ไข่ตุ๋นฟูจิ",
+          "name_en": null,
+          "price_thb": 200.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 2,
+          "name_th": "หอยลายผัดพริกเผา",
+          "name_en": null,
+          "price_thb": 180.0,
+          "spicy_level": 2,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 4,
+          "name_th": "ปีกไก่ทอด",
+          "name_en": null,
+          "price_thb": 150.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         }
       ]
     },
     {
-      "restaurant_id": "tu_place_50",
-      "name_th": "S.O.L.A.R Café",
+      "restaurant_id": "tu_place_34",
+      "name_th": "WM Biryani & PaniPuri",
       "name_en": null,
-      "latitude": 14.0697039,
-      "longitude": 100.6013648,
-      "distance_m": 286.1308908870083,
-      "price_tier": "$$",
+      "latitude": 14.0749974,
+      "longitude": 100.6165127,
+      "distance_m": 1459.5160251290563,
+      "price_tier": "$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
-      "description": "คาเฟ่ต้นแบบรักษ์โลกแห่งแรกใน มหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต โดดเด่นด้วยการใช้พลังงานไฟฟ้าจากแผงโซลาร์เซลล์ (Solar Panel) ที่ติดตั้งบนหลังคานำมาหมุนเวียนใช้ภายในร้านทั้งหมด. ตัวร้านตั้งอยู่ในโซนสีเขียว บรรยากาศร่มรื่น เงียบสงบ เป็นเหมือนที่พักผ่อนลับ ๆ ของนักศึกษาและบุคลากรที่ต้องการมานั่งจิบกาแฟ ทานอาหารปลอดสารพิษ หรือนั่งทำงานในบรรยากาศเป็นกันเอง",
+      "description": "ร้าน WM Biryani & PaniPuri ตั้งอยู่ที่ศูนย์อาหารภายในห้าง TUH Park ชั้น 1 อาคารจอดรถ โรงพยาบาลธรรมศาสตร์เฉลิมพระเกียรติ ศูนย์รังสิตครับ เป็นร้านอาหารอินเดียต้นตำรับแท้ๆ ในราคานักศึกษาและคนทำงาน",
       "safety_tier": "verified",
       "needs_ack": false,
       "ack_reason": null,
-      "excluded_count": 5,
+      "excluded_count": 0,
       "safe_dishes": [
         {
-          "id": 1228,
-          "name_th": "ข้าวกะเพราไก่",
+          "id": 826,
+          "name_th": "ข้าวหมกไก่บริยานี",
+          "name_en": null,
+          "price_thb": 79.0,
+          "spicy_level": 0,
+          "safety_tier": "verified"
+        },
+        {
+          "id": 827,
+          "name_th": "แกงไก่ติ๊กก้า",
           "name_en": null,
           "price_thb": 89.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 1230,
-          "name_th": "ข้าวกะเพราทะเล",
-          "name_en": null,
-          "price_thb": 109.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 1235,
-          "name_th": "ข้าวไข่เจียวกุ้ง",
-          "name_en": null,
-          "price_thb": 99.0,
-          "spicy_level": 0,
-          "safety_tier": "verified"
-        }
-      ]
-    },
-    {
-      "restaurant_id": "tu_place_41",
-      "name_th": "ออนเซ็น (กรีนแคนทีน) เอ็กซ์เพรส",
-      "name_en": null,
-      "latitude": 14.0733468,
-      "longitude": 100.6011404,
-      "distance_m": 483.3460908555433,
-      "price_tier": "$$",
-      "rating": null,
-      "photo_url": null,
-      "description": "เป็นร้านอาหารจานด่วนสไตล์ญี่ปุ่นและเกาหลียอดนิยมของนักศึกษา ม.ธรรมศาสตร์ ศูนย์รังสิต. ร้านนี้ตอบโจทย์เรื่องความสะดวกรวดเร็ว ปริมาณที่อิ่มคุ้มค่า และราคาที่เป็นมิตรต่อกระเป๋าสตางค์ของนักศึกษาอย่างมาก",
-      "safety_tier": "verified",
-      "needs_ack": false,
-      "ack_reason": null,
-      "excluded_count": 9,
-      "safe_dishes": [
-        {
-          "id": 1006,
-          "name_th": "ข้าวสไปซี่ดงบุริไข่ข้น",
-          "name_en": null,
-          "price_thb": 99.0,
-          "spicy_level": 2,
-          "safety_tier": "verified"
-        },
-        {
-          "id": 1008,
-          "name_th": "ข้าวกุ้งเทมปุระ",
-          "name_en": null,
-          "price_thb": 109.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         },
         {
-          "id": 1011,
-          "name_th": "ราเมนกุ้งเทมปุระ",
+          "id": 829,
+          "name_th": "ไก่ติ๊กก้า",
           "name_en": null,
-          "price_thb": 109.0,
+          "price_thb": 89.0,
           "spicy_level": 0,
           "safety_tier": "verified"
         }
       ]
     }
   ],
-  "session_id": "64a4ab182beb4a20b5a35f01f76fb68a",
+  "session_id": "37698493846841589ac7a4b112c40c5a",
   "fallback_used": false,
   "degraded": null
 }

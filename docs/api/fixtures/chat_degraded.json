@@ -10,6 +10,7 @@
       "distance_m": 505.20617641308803,
       "price_tier": "$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
       "description": "จัดจ้านถึงเครื่องกับเล้งต้มแซ่บกระดูกหมูชิ้นยักษ์เนื้อนุ่มร่อนซดคล่องคอในน้ำซุปเปรี้ยวเผ็ดจี๊ดจ๊าด ควบคู่กับผัดกะเพราพริกแห้งรสเข้มข้นจัดจ้านอย่างลงตัว",
       "safety_tier": "verified",
@@ -52,6 +53,7 @@
       "distance_m": 543.306660854303,
       "price_tier": "$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
       "description": "ร้านอาหารตามสั่งยอดนิยมราคาประหยัดของชาว มธ. ศูนย์รังสิต. ตัวร้านตั้งอยู่ฝั่งตรงข้ามมหาวิทยาลัยธรรมศาสตร์ ศูนย์รังสิต (โซนถนนคลองหลวง-เชียงราก) บริเวณด้านหน้าหอพัก VKP Mansion",
       "safety_tier": "verified",
@@ -94,6 +96,7 @@
       "distance_m": 657.4813075628358,
       "price_tier": "$$",
       "rating": null,
+      "user_rating_count": null,
       "photo_url": null,
       "description": "ตั้งอยู่ริมถนนประตูน้ำเชียงราก ฝั่งตรงข้ามมหาวิทยาลัยธรรมศาสตร์ (ใกล้ประตูเชียงราก 1 และหน้าปากซอยหอพัก Dcondo) โดดเด่นเรื่องรสชาติอีสานแท้รสจัดจ้าน เมนูหลากหลาย ทำอาหารได้รวดเร็วทันใจ และราคาเป็นกันเอง",
       "safety_tier": "verified",
@@ -128,7 +131,7 @@
       ]
     }
   ],
-  "session_id": "faf6db9956e6485685dabf0f0ba9368a",
+  "session_id": "6a2d028a349b4d7ba8bcfc5a99c817f6",
   "fallback_used": false,
   "degraded": "LLM_UNAVAILABLE"
 }

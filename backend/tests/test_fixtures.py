@@ -35,6 +35,10 @@ RESTAURANT_DETAIL_FIXTURES = [
     "restaurant_detail_enriched.json",
 ]
 
+AUTH_FIXTURES = [
+    "register.json",
+]
+
 
 def load(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
@@ -98,7 +102,7 @@ def test_error_fixtures_match_the_envelope(name):
 
 
 def test_other_fixtures_match_their_models():
-    schemas.SessionOut.model_validate(load("auth_session.json"))
+    schemas.UserOut.model_validate(load("register.json"))
     schemas.PreferencesOut.model_validate(load("preferences.json"))
     assert load("health.json")["status"] == "ok"
 
@@ -139,8 +143,7 @@ def test_the_two_restaurant_detail_states_are_covered():
 
 def test_every_fixture_file_is_covered_by_this_suite():
     """A new fixture must be asserted on, not just dropped in the folder."""
-    known = set(RECOMMEND_FIXTURES) | set(CHAT_FIXTURES) | set(RESTAURANT_DETAIL_FIXTURES) | {
-        "auth_session.json",
+    known = set(RECOMMEND_FIXTURES) | set(CHAT_FIXTURES) | set(RESTAURANT_DETAIL_FIXTURES) | set(AUTH_FIXTURES) | {
         "preferences.json",
         "health.json",
         "error_not_found.json",

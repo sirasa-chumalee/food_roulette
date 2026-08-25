@@ -33,8 +33,8 @@ silently breaking the frontend's mocks.
 | File | Endpoint | How it was produced |
 |------|----------|---------------------|
 | `health.json` | `GET /health` | real response |
-| `auth_session.json` | `POST /auth/session` | real response |
-| `preferences.json` | `PUT /users/{id}/preferences` | real response |
+| `register.json` | `POST /auth/register` | real response (the fixture user the generator registers) |
+| `preferences.json` | `PUT /preferences` (bearer token) | real response |
 | `recommend_all_verified.json` | `POST /recommend` | real — peanut + shellfish allergy, halal; the one Tier-B venue of the 50 is selected out |
 | `recommend_mixed.json` | `POST /recommend` | real — Jain profile, cards selected to show both tiers |
 | `recommend_unverified_only.json` | `POST /recommend` | **synthesised** (see below); the cards inside are real |
@@ -44,7 +44,7 @@ silently breaking the frontend's mocks.
 | `chat_degraded.json` | `POST /chat` | real — the Gemini-outage path, byte-for-byte what a keyless deployment returns |
 | `restaurant_detail.json` | `GET /restaurants/{id}` | real — keyless (nulls) response; the degraded "works, just plainer" state |
 | `restaurant_detail_enriched.json` | `GET /restaurants/{id}` | real endpoint response with a **seeded** cache (no real Places call); shows rating/photos/reviews/hours |
-| `error_not_found.json` | any | real 404 |
+| `error_not_found.json` | any | real 404 — valid token, unknown account |
 | `error_invalid_prefs.json` | any | real 422 |
 
 Responses are truncated to 3 cards × 3 dishes for readability. **Restaurant detail fixtures are NOT truncated** — the fixture shows the full 25-dish menu so the detail screen can be built from a realistic payload.

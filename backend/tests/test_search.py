@@ -196,26 +196,14 @@ def test_decomposed_keywords_match_a_real_restaurant_for_other_cuisines(
 
 
 # --- Integration: prove the fix shows up in an actual /chat response, given
-# extraction output shaped like the new prompt asks for. Registers its own
-# user — the shared `user_id` fixture is broken (pre-existing, unrelated
-# `/auth/session` issue).
-
-
-@pytest.fixture()
-def qa_user_id(client) -> str:
-    email = f"qa-search-{uuid.uuid4().hex}@test.com"
-    response = client.post(
-        "/auth/register",
-        json={"email": email, "password": "hunter22", "display_name": "qa"},
-    )
-    assert response.status_code == 201, response.text
-    return response.json()["id"]
+# extraction output shaped like the new prompt asks for.
 
 
 @pytest.mark.parametrize("text", ["I want chinese food", "อยากกินอาหารจีนอร่อยๆ"])
-def test_chinese_craving_surfaces_real_cards_through_chat(client, qa_user_id, monkeypatch, text):
+def test_chinese_craving_surfaces_real_cards_through_chat(client, user, monkeypatch, text):
     """Given cravings shaped like the new prompt should produce, /chat must
-    rank real Chinese-cuisine restaurants to the top."""
+    rank real Chinese-cuisine restaurants to the top. Identity comes from the
+    registered+logged-in `user` fixture (bearer header), never a body field."""
     cravings = ["chinese food", *CHINESE_KEYWORDS]
     monkeypatch.setattr(
         llm_extract, "extract", lambda t: llm_extract.ExtractResult(cravings=cravings)
@@ -224,7 +212,8 @@ def test_chinese_craving_surfaces_real_cards_through_chat(client, qa_user_id, mo
 
     response = client.post(
         "/chat",
-        json={"user_id": qa_user_id, "text": text, "limit": 5, **TU_RANGSIT},
+        json={"text": text, "limit": 5, **TU_RANGSIT},
+        headers=user["headers"],
     )
     assert response.status_code == 200, response.text
     body = response.json()

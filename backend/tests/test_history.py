@@ -1,7 +1,12 @@
 """M3 history and feedback-loop tests.
 
-These tests use the existing client/user_id/conn fixtures from conftest.py.
+These tests use the `client`/`user`/`conn` fixtures from conftest.py. Every
+request to the protected /history endpoints carries the authenticated user's
+bearer token — identity comes from the token, never the body or a query param,
+so none of these tests may send a `user_id` alongside the events.
 """
+import uuid
+
 from app import ranking
 
 
@@ -11,12 +16,12 @@ def _restaurant_id(conn) -> str:
     return row["id"]
 
 
-def test_post_history_accepts_batch(client, user_id, conn):
+def test_post_history_accepts_batch(client, user, conn):
     restaurant_id = _restaurant_id(conn)
     response = client.post(
         "/history",
+        headers=user["headers"],
         json={
-            "user_id": user_id,
             "events": [
                 {
                     "session_id": "session-a",
@@ -52,7 +57,7 @@ def test_post_history_accepts_batch(client, user_id, conn):
     rows = conn.execute(
         "SELECT action_type, session_id, context FROM action_history "
         "WHERE user_id = ? ORDER BY id;",
-        (user_id,),
+        (user["user_id"],),
     ).fetchall()
     assert [row["action_type"] for row in rows] == [
         "IMPRESSION",
@@ -64,12 +69,12 @@ def test_post_history_accepts_batch(client, user_id, conn):
     assert '"reason":"not_interested"' in rows[-1]["context"]
 
 
-def test_get_history_returns_newest_first(client, user_id, conn):
+def test_get_history_returns_newest_first(client, user, conn):
     restaurant_id = _restaurant_id(conn)
     client.post(
         "/history",
+        headers=user["headers"],
         json={
-            "user_id": user_id,
             "events": [
                 {
                     "session_id": "session-a",
@@ -85,22 +90,22 @@ def test_get_history_returns_newest_first(client, user_id, conn):
         },
     )
 
-    response = client.get("/history", params={"user_id": user_id})
+    response = client.get("/history", headers=user["headers"])
     assert response.status_code == 200
     history = response.json()["history"]
     assert [event["action_type"] for event in history] == ["REJECTION", "CLICK"]
     assert history[0]["session_id"] == "session-b"
 
 
-def test_history_isolated_by_user(client, conn):
-    user_a = client.post("/auth/session", json={"display_name": "a"}).json()["user_id"]
-    user_b = client.post("/auth/session", json={"display_name": "b"}).json()["user_id"]
+def test_history_isolated_by_user(client, user, another_user, conn):
+    """One account's history must never leak into another's — even between two
+    users registered back-to-back against the same database."""
     restaurant_id = _restaurant_id(conn)
 
     client.post(
         "/history",
+        headers=user["headers"],
         json={
-            "user_id": user_a,
             "events": [{
                 "session_id": "session-a",
                 "restaurant_id": restaurant_id,
@@ -109,22 +114,23 @@ def test_history_isolated_by_user(client, conn):
         },
     )
 
-    response = client.get("/history", params={"user_id": user_b})
+    response = client.get("/history", headers=another_user["headers"])
     assert response.status_code == 200
     assert response.json()["history"] == []
 
 
-def test_unknown_user_gets_not_found(client):
-    response = client.get("/history", params={"user_id": "does-not-exist"})
+def test_unknown_user_gets_not_found(client, mint):
+    """A token that decodes but points at an account that doesn't exist."""
+    response = client.get("/history", headers=mint("does-not-exist"))
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "NOT_FOUND"
 
 
-def test_unknown_restaurant_rejects_entire_batch(client, user_id):
+def test_unknown_restaurant_rejects_entire_batch(client, user):
     response = client.post(
         "/history",
+        headers=user["headers"],
         json={
-            "user_id": user_id,
             "events": [{
                 "session_id": "session-a",
                 "restaurant_id": "does-not-exist",
@@ -136,21 +142,22 @@ def test_unknown_restaurant_rejects_entire_batch(client, user_id):
     assert response.json()["error"]["code"] == "NOT_FOUND"
 
 
-def test_empty_history_batch_is_invalid(client, user_id):
+def test_empty_history_batch_is_invalid(client, user):
     response = client.post(
         "/history",
-        json={"user_id": user_id, "events": []},
+        headers=user["headers"],
+        json={"events": []},
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_PREFS"
 
 
-def test_invalid_action_type_is_rejected(client, user_id, conn):
+def test_invalid_action_type_is_rejected(client, user, conn):
     restaurant_id = _restaurant_id(conn)
     response = client.post(
         "/history",
+        headers=user["headers"],
         json={
-            "user_id": user_id,
             "events": [{
                 "session_id": "session-a",
                 "restaurant_id": restaurant_id,
@@ -188,10 +195,10 @@ def test_rejection_penalty_is_only_session_scoped():
     normal_score = normal[0].score
 
     rejected = ranking.rank(
-     [candidate],
+        [candidate],
         soft,
-     seed=1,
-     rejected_restaurant_ids={"r1"},
+        seed=1,
+        rejected_restaurant_ids={"r1"},
     )
 
     assert rejected[0].score == normal_score - ranking.REJECTION_PENALTY

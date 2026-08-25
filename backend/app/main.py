@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi import Depends, FastAPI, HTTPException, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -46,7 +46,8 @@ class HistoryEvent(BaseModel):
 
 
 class HistoryBatchIn(BaseModel):
-    user_id: str
+    # Identity comes from the bearer token (auth.get_current_user_id), never
+    # from the body — see main.write_history.
     events: list[HistoryEvent]
 
 
@@ -152,8 +153,12 @@ async def _api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
 async def _http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     # Anything raised as a plain HTTPException still comes out in the envelope —
     # including the router's own 404 for an unknown path, which is a *Starlette*
-    # HTTPException, not FastAPI's subclass.
-    code = "NOT_FOUND" if exc.status_code == 404 else "INTERNAL"
+    # HTTPException, not FastAPI's subclass. 401s from the auth dependency are
+    # mapped to the UNAUTHORIZED code so the client can branch on it.
+    code = {
+        401: "UNAUTHORIZED",
+        404: "NOT_FOUND",
+    }.get(exc.status_code, "INTERNAL")
     return error_response(exc.status_code, code, str(exc.detail))
 
 
@@ -442,18 +447,22 @@ def _history_row(row) -> HistoryEventOut:
 
 
 @app.post("/history", response_model=HistoryWriteOut, status_code=201)
-def write_history(body: HistoryBatchIn) -> HistoryWriteOut:
+def write_history(
+    body: HistoryBatchIn,
+    user_id: str = Depends(auth.get_current_user_id),
+) -> HistoryWriteOut:
     """Persist a batch of user feedback/impression events.
 
     The endpoint is intentionally fire-and-forget friendly: the whole batch is
     committed atomically, and no event is allowed to alter the safety filter.
+    Identity comes from the bearer token, never the body.
     """
     if not body.events:
         raise ApiError(422, "INVALID_PREFS", "At least one history event is required.")
 
     conn = db.connect()
     try:
-        user = conn.execute("SELECT id FROM users WHERE id = ?;", (body.user_id,)).fetchone()
+        user = conn.execute("SELECT id FROM users WHERE id = ?;", (user_id,)).fetchone()
         if user is None:
             raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
 
@@ -478,7 +487,7 @@ def write_history(body: HistoryBatchIn) -> HistoryWriteOut:
             [
                 (
                     event.session_id,
-                    body.user_id,
+                    user_id,
                     event.restaurant_id,
                     event.action_type,
                     now,
@@ -496,10 +505,10 @@ def write_history(body: HistoryBatchIn) -> HistoryWriteOut:
 
 @app.get("/history", response_model=HistoryOut)
 def get_history(
-    user_id: str = Query(...),
+    user_id: str = Depends(auth.get_current_user_id),
     limit: int = Query(100, ge=1, le=500),
 ) -> HistoryOut:
-    """Return a user's newest history events first."""
+    """Return the authenticated user's newest history events first."""
     conn = db.connect()
     try:
         user = conn.execute("SELECT id FROM users WHERE id = ?;", (user_id,)).fetchone()
@@ -521,9 +530,9 @@ def get_history(
 
 @app.get("/history/stats", response_model=HistoryStatsOut)
 def get_history_stats(
-    user_id: str = Query(...),
+    user_id: str = Depends(auth.get_current_user_id),
 ) -> HistoryStatsOut:
-    """Return aggregated history statistics for a user."""
+    """Return aggregated history statistics for the authenticated user."""
     conn = db.connect()
     try:
         user = conn.execute(
@@ -729,15 +738,17 @@ def login(body: schemas.LoginIn) -> schemas.TokenOut:
         return schemas.TokenOut(
             access_token=token,
             token_type="bearer",
+            user_id=user["id"],
         )
 
     finally:
         conn.close()
 
-@app.get("/users/{user_id}/preferences", response_model=schemas.PreferencesOut)
-def get_preferences(user_id: str) -> schemas.PreferencesOut:
-    """Look up a user's saved allergy/diet settings. If they've never saved any,
-    hand back empty defaults instead of an error."""
+@app.get("/preferences", response_model=schemas.PreferencesOut)
+def get_preferences(user_id: str = Depends(auth.get_current_user_id)) -> schemas.PreferencesOut:
+    """Look up the authenticated user's saved allergy/diet settings. If they've
+    never saved any, hand back empty defaults instead of an error. Identity
+    comes from the bearer token, never the path or body."""
     conn = db.connect()
     try:
         user = conn.execute("SELECT id FROM users WHERE id = ?;", (user_id,)).fetchone()
@@ -749,9 +760,13 @@ def get_preferences(user_id: str) -> schemas.PreferencesOut:
     return schemas.PreferencesOut(user_id=user_id, hard=hard, soft=soft)
 
 
-@app.put("/users/{user_id}/preferences", response_model=schemas.PreferencesOut)
-def put_preferences(user_id: str, body: schemas.PreferencesIn) -> schemas.PreferencesOut:
-    """Save (or overwrite) a user's allergy/diet settings."""
+@app.put("/preferences", response_model=schemas.PreferencesOut)
+def put_preferences(
+    body: schemas.PreferencesIn,
+    user_id: str = Depends(auth.get_current_user_id),
+) -> schemas.PreferencesOut:
+    """Save (or overwrite) the authenticated user's allergy/diet settings.
+    Identity comes from the bearer token, never the path or body."""
     conn = db.connect()
     try:
         user = conn.execute("SELECT id FROM users WHERE id = ?;", (user_id,)).fetchone()
@@ -825,17 +840,19 @@ def _recommend_for(
 def recommend(
     body: schemas.RecommendIn,
     session_id: str | None = Query(None),
+    user_id: str = Depends(auth.get_current_user_id),
 ) -> schemas.RecommendOut:
     """Pick restaurants for this user. First we throw out every dish that
     breaks a hard rule (allergy, halal, etc.) — no exceptions. Then, among
     what's left, we sort by how well it matches soft preferences like spice
-    level and distance."""
+    level and distance. Identity comes from the bearer token, never the body.
+    """
     conn = db.connect()
     try:
-        user = conn.execute("SELECT id FROM users WHERE id = ?;", (body.user_id,)).fetchone()
+        user = conn.execute("SELECT id FROM users WHERE id = ?;", (user_id,)).fetchone()
         if user is None:
             raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
-        hard, soft = _load_preferences(conn, body.user_id)
+        hard, soft = _load_preferences(conn, user_id)
         recommendations, fallback = _recommend_for(
             conn, body, hard, soft, session_id=session_id or getattr(body, "session_id", None)
         )
@@ -846,24 +863,28 @@ def recommend(
 
 
 @app.post("/chat", response_model=schemas.ChatOut)
-def chat(body: schemas.ChatIn) -> schemas.ChatOut:
+def chat(
+    body: schemas.ChatIn,
+    user_id: str = Depends(auth.get_current_user_id),
+) -> schemas.ChatOut:
     """Read the message, filter, then describe what survived (DESIGN §6).
 
     Gemini sits on both ends and never in the middle: it turns the message into
     preferences, and later writes the reply, but the choice of restaurants is
     made by the same filter /recommend uses. If Gemini is unreachable the
     request still succeeds — the user gets their saved-profile recommendations
-    and a `degraded` code explaining why the reply is plain.
+    and a `degraded` code explaining why the reply is plain. Identity comes
+    from the bearer token, never the body.
     """
     session_id = body.session_id or uuid.uuid4().hex
 
     conn = db.connect()
     try:
-        user = conn.execute("SELECT id FROM users WHERE id = ?;", (body.user_id,)).fetchone()
+        user = conn.execute("SELECT id FROM users WHERE id = ?;", (user_id,)).fetchone()
         if user is None:
             raise ApiError(404, "NOT_FOUND", "We couldn't find that account.")
 
-        hard, soft = _load_preferences(conn, body.user_id)
+        hard, soft = _load_preferences(conn, user_id)
         degraded: str | None = None
         # Cravings/facility needs parsed out of this message. Empty when Gemini
         # failed or said nothing — search then contributes no ranking signal.

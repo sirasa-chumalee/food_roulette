@@ -148,8 +148,12 @@ paths:
 
         The endpoint is intentionally fire-and-forget friendly: the whole batch is
 
-        committed atomically, and no event is allowed to alter the safety filter.'
+        committed atomically, and no event is allowed to alter the safety filter.
+
+        Identity comes from the bearer token, never the body.'
       operationId: write_history_history_post
+      security:
+      - HTTPBearer: []
       requestBody:
         required: true
         content:
@@ -177,15 +181,11 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
     get:
       summary: Get History
-      description: Return a user's newest history events first.
+      description: Return the authenticated user's newest history events first.
       operationId: get_history_history_get
+      security:
+      - HTTPBearer: []
       parameters:
-      - name: user_id
-        in: query
-        required: true
-        schema:
-          type: string
-          title: User Id
       - name: limit
         in: query
         required: false
@@ -217,15 +217,8 @@ paths:
   /history/stats:
     get:
       summary: Get History Stats
-      description: Return aggregated history statistics for a user.
+      description: Return aggregated history statistics for the authenticated user.
       operationId: get_history_stats_history_stats_get
-      parameters:
-      - name: user_id
-        in: query
-        required: true
-        schema:
-          type: string
-          title: User Id
       responses:
         '200':
           description: Successful Response
@@ -245,19 +238,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-  /auth/session:
+      security:
+      - HTTPBearer: []
+  /auth/register:
     post:
-      summary: Create Session
-      description: 'Fake login for now. Hands out an ID and a token, but nothing checks
-        the
-
-        token yet — real login comes later.'
-      operationId: create_session_auth_session_post
+      summary: Register
+      operationId: register_auth_register_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SessionIn'
+              $ref: '#/components/schemas/RegisterIn'
         required: true
       responses:
         '201':
@@ -265,7 +256,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SessionOut'
+                $ref: '#/components/schemas/UserOut'
         '422':
           description: Error envelope (ROADMAP §3.2)
           content:
@@ -278,21 +269,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-  /users/{user_id}/preferences:
+  /auth/login:
+    post:
+      summary: Login
+      operationId: login_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenOut'
+        '422':
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        default:
+          description: Error envelope (ROADMAP §3.2)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /preferences:
     get:
       summary: Get Preferences
-      description: 'Look up a user''s saved allergy/diet settings. If they''ve never
-        saved any,
+      description: 'Look up the authenticated user''s saved allergy/diet settings.
+        If they''ve
 
-        hand back empty defaults instead of an error.'
-      operationId: get_preferences_users__user_id__preferences_get
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: User Id
+        never saved any, hand back empty defaults instead of an error. Identity
+
+        comes from the bearer token, never the path or body.'
+      operationId: get_preferences_preferences_get
       responses:
         '200':
           description: Successful Response
@@ -312,23 +327,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - HTTPBearer: []
     put:
       summary: Put Preferences
-      description: Save (or overwrite) a user's allergy/diet settings.
-      operationId: put_preferences_users__user_id__preferences_put
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: User Id
+      description: 'Save (or overwrite) the authenticated user''s allergy/diet settings.
+
+        Identity comes from the bearer token, never the path or body.'
+      operationId: put_preferences_preferences_put
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/PreferencesIn'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -348,6 +360,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - HTTPBearer: []
   /recommend:
     post:
       summary: Recommend
@@ -358,8 +372,10 @@ paths:
 
         what''s left, we sort by how well it matches soft preferences like spice
 
-        level and distance.'
+        level and distance. Identity comes from the bearer token, never the body.'
       operationId: recommend_recommend_post
+      security:
+      - HTTPBearer: []
       parameters:
       - name: session_id
         in: query
@@ -409,7 +425,9 @@ paths:
 
         request still succeeds — the user gets their saved-profile recommendations
 
-        and a `degraded` code explaining why the reply is plain.'
+        and a `degraded` code explaining why the reply is plain. Identity comes
+
+        from the bearer token, never the body.'
       operationId: chat_chat_post
       requestBody:
         content:
@@ -436,13 +454,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - HTTPBearer: []
 components:
   schemas:
     ChatIn:
       properties:
-        user_id:
-          type: string
-          title: User Id
         text:
           type: string
           title: Text
@@ -474,7 +491,6 @@ components:
           title: Seed
       type: object
       required:
-      - user_id
       - text
       title: ChatIn
     ChatOut:
@@ -501,6 +517,7 @@ components:
             - NO_RESULTS
             - INVALID_PREFS
             - NOT_FOUND
+            - UNAUTHORIZED
             - LLM_UNAVAILABLE
             - UPSTREAM_TIMEOUT
             - INTERNAL
@@ -586,9 +603,6 @@ components:
         `filter.py` — the LLM never gets a say (DESIGN §4).'
     HistoryBatchIn:
       properties:
-        user_id:
-          type: string
-          title: User Id
         events:
           items:
             $ref: '#/components/schemas/HistoryEvent'
@@ -596,7 +610,6 @@ components:
           title: Events
       type: object
       required:
-      - user_id
       - events
       title: HistoryBatchIn
     HistoryEvent:
@@ -757,6 +770,20 @@ components:
       required:
       - accepted
       title: HistoryWriteOut
+    LoginIn:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginIn
     PlaceReview:
       properties:
         author_name:
@@ -845,7 +872,6 @@ components:
         soft:
           $ref: '#/components/schemas/SoftPreferences'
           default:
-            spicy_tolerance: 3
             diet_style: none
             wants_parking: false
       type: object
@@ -867,7 +893,6 @@ components:
         soft:
           $ref: '#/components/schemas/SoftPreferences'
           default:
-            spicy_tolerance: 3
             diet_style: none
             wants_parking: false
         user_id:
@@ -879,9 +904,6 @@ components:
       title: PreferencesOut
     RecommendIn:
       properties:
-        user_id:
-          type: string
-          title: User Id
         latitude:
           anyOf:
           - type: number
@@ -904,8 +926,6 @@ components:
           - type: 'null'
           title: Seed
       type: object
-      required:
-      - user_id
       title: RecommendIn
     RecommendOut:
       properties:
@@ -962,6 +982,11 @@ components:
           - type: number
           - type: 'null'
           title: Rating
+        user_rating_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: User Rating Count
         photo_url:
           anyOf:
           - type: string
@@ -1011,14 +1036,36 @@ components:
       description: 'The single object the whole UI is built from (ROADMAP §3.1).
 
 
-        `rating` and `photo_url` stay null until M4 wires up Google Places; the
+        `rating` / `user_rating_count` / `photo_url` come from Google Places
 
-        client must render gracefully without them from day one.
+        (M4, lazy + cached server-side — see places.py); they stay null when the
+
+        venue is un-keyed or the lookup failed, and the client must render
+
+        gracefully without them.
 
 
         `description` is the human-written, searchable blurb (display only — it is
 
         never read by filter.py, so it can never become a safety claim).'
+    RegisterIn:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+        display_name:
+          type: string
+          title: Display Name
+      type: object
+      required:
+      - email
+      - password
+      - display_name
+      title: RegisterIn
     RestaurantDetailOut:
       properties:
         restaurant:
@@ -1083,41 +1130,15 @@ components:
       - spicy_level
       - safety_tier
       title: SafeDish
-    SessionIn:
-      properties:
-        display_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Display Name
-      type: object
-      title: SessionIn
-    SessionOut:
-      properties:
-        user_id:
-          type: string
-          title: User Id
-        token:
-          type: string
-          title: Token
-        display_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Display Name
-      type: object
-      required:
-      - user_id
-      - token
-      title: SessionOut
     SoftPreferences:
       properties:
         spicy_tolerance:
-          type: integer
-          maximum: 3.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 3.0
+            minimum: 0.0
+          - type: 'null'
           title: Spicy Tolerance
-          default: 3
         price_tier:
           anyOf:
           - type: string
@@ -1144,6 +1165,46 @@ components:
           default: false
       type: object
       title: SoftPreferences
+    TokenOut:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+        user_id:
+          type: string
+          title: User Id
+      type: object
+      required:
+      - access_token
+      - token_type
+      - user_id
+      title: TokenOut
+    UserOut:
+      properties:
+        id:
+          type: string
+          title: Id
+        email:
+          type: string
+          title: Email
+        display_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Display Name
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - id
+      - email
+      - display_name
+      - created_at
+      title: UserOut
     ValidationError:
       properties:
         loc:
@@ -1172,6 +1233,7 @@ components:
           - NO_RESULTS
           - INVALID_PREFS
           - NOT_FOUND
+          - UNAUTHORIZED
           - LLM_UNAVAILABLE
           - UPSTREAM_TIMEOUT
           - INTERNAL
@@ -1200,6 +1262,7 @@ components:
               - NO_RESULTS
               - INVALID_PREFS
               - NOT_FOUND
+              - UNAUTHORIZED
               - LLM_UNAVAILABLE
               - UPSTREAM_TIMEOUT
               - INTERNAL
@@ -1226,3 +1289,7 @@ components:
       - error
       title: ErrorEnvelope
       type: object
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer

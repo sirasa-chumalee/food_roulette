@@ -5,7 +5,7 @@ import sqlite3
 
 import pytest
 
-from app import config, db, ingest
+from app import auth, config, db, ingest
 
 EXPECTED_RESTAURANTS = 50
 EXPECTED_MENU_ITEMS = 1250
@@ -36,9 +36,18 @@ def test_reingest_is_idempotent_and_keeps_user_data(tmp_path):
     conn = db.connect(db_path)
     try:
         ingest.ingest(conn, config.DATA_DIR)
+        # users now carries auth columns (email UNIQUE NOT NULL, password_hash
+        # NOT NULL) — the row must look like one /auth/register would create.
         conn.execute(
-            "INSERT INTO users (id, display_name, created_at) VALUES (?, ?, ?);",
-            ("keep_me", "regression", "2026-07-28T00:00:00Z"),
+            "INSERT INTO users (id, email, password_hash, display_name, created_at)"
+            " VALUES (?, ?, ?, ?, ?);",
+            (
+                "keep_me",
+                "regression@test.example",
+                auth.hash_password("hunter22"),
+                "regression",
+                "2026-07-28T00:00:00Z",
+            ),
         )
         conn.commit()
 

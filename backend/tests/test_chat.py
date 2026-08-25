@@ -61,12 +61,20 @@ def stub_llm(monkeypatch):
     return install
 
 
-def chat(client, user_id, text="อยากกินอะไรเผ็ดๆ ไม่เอาหมู", **extra):
+def chat(client, user, text="อยากกินอะไรเผ็ดๆ ไม่เอาหมู", **extra):
     response = client.post(
-        "/chat", json={"user_id": user_id, "text": text, "limit": 10, **TU_RANGSIT, **extra}
+        "/chat",
+        headers=user["headers"],
+        json={"text": text, "limit": 10, **TU_RANGSIT, **extra},
     )
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def put_prefs(client, user, hard, soft):
+    return client.put(
+        "/preferences", headers=user["headers"], json={"hard": hard, "soft": soft}
+    )
 
 
 def dish_rows(conn, body: dict) -> list:
@@ -99,7 +107,7 @@ def test_a_message_can_add_a_constraint(field):
     assert getattr(merged, field) is True
 
 
-def test_stored_allergens_survive_any_extraction():
+def test_stored_allergens_absorb_and_survive_extraction():
     stored = schemas.HardConstraints(allergens=["peanuts", "shellfish"])
     merged = llm_extract.union_hard_constraints(
         stored, llm_extract.ExtractedHardConstraints(allergens=["fish"])
@@ -107,7 +115,7 @@ def test_stored_allergens_survive_any_extraction():
     assert set(merged.allergens) == {"peanuts", "shellfish", "fish"}
 
 
-def test_union_is_never_narrower_than_what_was_stored():
+def test_union_is_never_narrower_stored_field_survives():
     """Property check over every combination of a stored and a detected flag.
 
     `union` has one job — the result must satisfy at least everything the stored
@@ -150,39 +158,36 @@ def test_junk_soft_prefs_fall_back_to_the_stored_value():
 # ---------------------------------------------------------------------------
 
 
-def test_a_constraint_detected_in_chat_is_applied(client, conn, user_id, stub_llm):
-    """"ไม่เอาหมู" reaches the SQL filter, not just the prompt."""
+def test_a_constraint_detected_in_chat_is_applied(client, conn, user, stub_llm):
+    """``ไม่เอาหมู`` reaches the SQL filter, not just the prompt."""
     stub_llm(extract=llm_extract.ExtractResult(
         cravings=["เผ็ด"],
         hard_constraints=llm_extract.ExtractedHardConstraints(no_pork=True),
     ))
 
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["recommendations"], "a no-pork profile still has plenty to eat"
     assert all(row["contains_pork"] == 0 for row in dish_rows(conn, body))
 
 
-def test_a_stored_allergy_holds_when_the_model_forgets_it(client, conn, user_id, stub_llm):
-    client.put(
-        f"/users/{user_id}/preferences",
-        json={"hard": {"allergens": ["peanuts"]}, "soft": {}},
-    )
+def test_a_stored_allergy_holds_when_the_model_forgets_it(client, conn, user, stub_llm):
+    assert put_prefs(client, user, {"allergens": ["peanuts"]}, {}).status_code == 200
     # The model returns nothing at all — the profile is the only thing standing
     # between the user and a peanut.
     stub_llm(extract=llm_extract.ExtractResult())
 
-    body = chat(client, user_id, text="anything is fine honestly")
+    body = chat(client, user, text="anything is fine honestly")
     assert all(row["peanuts"] == 0 for row in dish_rows(conn, body))
 
 
-def test_chat_and_recommend_agree_on_the_same_profile(client, user_id, stub_llm):
+def test_chat_and_recommend_agree_on_the_same_profile(client, user, stub_llm):
     """With nothing extracted, chat is /recommend with prose on top."""
     stub_llm(extract=llm_extract.ExtractResult())
-    client.put(f"/users/{user_id}/preferences", json={"hard": {"halal": True}, "soft": {}})
+    assert put_prefs(client, user, {"halal": True}, {}).status_code == 200
 
-    chatted = chat(client, user_id, seed=7)
+    chatted = chat(client, user, seed=7)
     recommended = client.post(
-        "/recommend", json={"user_id": user_id, "limit": 10, "seed": 7, **TU_RANGSIT}
+        "/recommend", headers=user["headers"], json={"limit": 10, "seed": 7, **TU_RANGSIT}
     ).json()
 
     assert [c["restaurant_id"] for c in chatted["recommendations"]] == [
@@ -191,19 +196,19 @@ def test_chat_and_recommend_agree_on_the_same_profile(client, user_id, stub_llm)
     assert chatted["fallback_used"] == recommended["fallback_used"]
 
 
-def test_extraction_is_never_shown_a_restaurant(client, user_id, stub_llm):
+def test_extraction_is_never_shown_a_restaurant(client, user, stub_llm):
     """Step 1 runs before any venue is loaded (DESIGN §6). It gets the message,
     and nothing else — so it has nothing to leak or be steered by."""
     calls = stub_llm(extract=llm_extract.ExtractResult())
-    chat(client, user_id, text="ข้าวมันไก่")
+    chat(client, user, text="ข้าวมันไก่")
 
     extract_calls = [c for c in calls if c[0] == "extract"]
     assert extract_calls == [("extract", "ข้าวมันไก่")]
 
 
-def test_narration_only_ever_sees_cards_that_are_in_the_response(client, user_id, stub_llm):
+def test_narration_only_ever_sees_cards_that_are_in_the_response(client, user, stub_llm):
     calls = stub_llm(extract=llm_extract.ExtractResult())
-    body = chat(client, user_id)
+    body = chat(client, user)
 
     (narrate_call,) = [c for c in calls if c[0] == "narrate"]
     assert narrate_call[2] == [c["restaurant_id"] for c in body["recommendations"]]
@@ -215,50 +220,50 @@ def test_narration_only_ever_sees_cards_that_are_in_the_response(client, user_id
 
 
 def test_every_restaurant_id_in_the_reply_exists_in_the_recommendations(
-    client, user_id, stub_llm
+    client, user, stub_llm
 ):
     """ROADMAP M2's guardrail, asserted against the endpoint's own output.
 
     The narrator is told to name every id it was given plus one it wasn't; the
-    shipped reply must still mention no id outside `recommendations`.
+    shipped reply must still mention no id outside `recommendation ids`.
     """
     stub_llm(
         extract=llm_extract.ExtractResult(),
         narrate=lambda cards: " ".join(c.restaurant_id for c in cards) + " and tu_place_999",
     )
 
-    body = chat(client, user_id)
+    body = chat(client, user)
     returned = {c["restaurant_id"] for c in body["recommendations"]}
     mentioned = set(llm_narrate._ID_PATTERN.findall(body["reply"]))
     assert mentioned <= returned
 
 
-def test_a_reply_naming_an_excluded_restaurant_is_discarded(client, user_id, stub_llm):
+def test_a_reply_naming_an_excluded_restaurant_is_discarded(client, user, stub_llm):
     """The dangerous case: the model recommends a venue the filter removed."""
     stub_llm(
         extract=llm_extract.ExtractResult(),
         narrate="Skip those and go to tu_place_999 instead.",
     )
 
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["reply"] == DEGRADED_REPLY
     assert body["degraded"] == "LLM_UNAVAILABLE"
     # The cards were never in question — only the prose was thrown away.
     assert body["recommendations"]
 
 
-def test_a_grounded_reply_is_passed_through_untouched(client, user_id, stub_llm):
+def test_a_grounded_reply_is_passed_through_untouched(client, user, stub_llm):
     stub_llm(
         extract=llm_extract.ExtractResult(),
         narrate=lambda cards: f"{cards[0].name_th} looks like a good fit tonight.",
     )
 
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["degraded"] is None
     assert body["recommendations"][0]["name_th"] in body["reply"]
 
 
-def test_grounding_check_tolerates_a_name_that_contains_another(client, user_id):
+def test_grounding_check_tolerates_a_name_that_contains_another(client, user):
     """A returned "CO Coffee & Restaurant" must not trip the check just because
     some other row is called "CO" — a false alarm costs a good reply."""
     card = schemas.RecommendedRestaurant(
@@ -294,9 +299,9 @@ def test_narration_of_an_empty_result_is_a_fixed_line():
 # ---------------------------------------------------------------------------
 
 
-def test_no_api_key_still_returns_recommendations(client, user_id):
+def test_no_api_key_still_returns_recommendations(client, user):
     """The default state on a fresh clone: no key, no stub, real code path."""
-    body = chat(client, user_id)
+    body = chat(client, user)
 
     assert body["degraded"] == "LLM_UNAVAILABLE"
     assert body["reply"] == DEGRADED_REPLY
@@ -312,15 +317,12 @@ def test_no_api_key_still_returns_recommendations(client, user_id):
     ],
 )
 def test_extraction_failure_degrades_to_the_stored_profile(
-    client, conn, user_id, stub_llm, failure, expected
+    client, conn, user, stub_llm, failure, expected
 ):
-    client.put(
-        f"/users/{user_id}/preferences",
-        json={"hard": {"allergens": ["peanuts"]}, "soft": {}},
-    )
+    assert put_prefs(client, user, {"allergens": ["peanuts"]}, {}).status_code == 200
     stub_llm(extract=failure)
 
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["degraded"] == expected
     assert body["reply"] == DEGRADED_REPLY
     # Degraded means "we couldn't read your message", never "we skipped the filter".
@@ -334,26 +336,26 @@ def test_extraction_failure_degrades_to_the_stored_profile(
         (llm_extract.ExtractTimeout("504 DEADLINE_EXCEEDED"), "UPSTREAM_TIMEOUT"),
     ],
 )
-def test_narration_failure_keeps_the_cards(client, user_id, stub_llm, failure, expected):
+def test_narration_failure_keeps_the_cards(client, user, stub_llm, failure, expected):
     stub_llm(extract=llm_extract.ExtractResult(), narrate=failure)
 
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["degraded"] == expected
     assert body["reply"] == DEGRADED_REPLY
     assert body["recommendations"]
 
 
-def test_extraction_failure_does_not_attempt_narration(client, user_id, stub_llm):
+def test_extraction_failure_does_not_attempt_narration(client, user, stub_llm):
     """A second call to a service we just watched fail buys a timeout, nothing more."""
     calls = stub_llm(extract=llm_extract.ExtractUnavailable("down"))
-    chat(client, user_id)
+    chat(client, user)
     assert not [c for c in calls if c[0] == "narrate"]
 
 
-def test_parsed_cravings_drive_the_search_match(client, user_id, stub_llm, monkeypatch):
+def test_parsed_cravings_drive_the_search_match(client, user, stub_llm, monkeypatch):
     """/chat hands the message's cravings/facility needs to the FTS matcher.
 
-    This is the seam that turns a wish like \"salad, hot\" into a ranking boost:
+    This is the seam that turns a wish like "salad, hot" into a ranking boost:
     the parsed phrases must reach `search.match_restaurant_ids`. The ordering
     bonus itself is pinned in test_ranking_craving.py — here we prove the value
     actually flows end-to-end through /chat.
@@ -371,14 +373,12 @@ def test_parsed_cravings_drive_the_search_match(client, user_id, stub_llm, monke
             facility_needs=["parking"],
         )
     )
-    chat(client, user_id, text="crunchy salad, and parking please")
+    chat(client, user, text="crunchy salad, and parking please")
 
     assert seen == {"phrases": ["salad", "parking"]}
 
 
-def test_degraded_chat_skips_search_and_still_returns_cards(
-    client, user_id, stub_llm, monkeypatch
-):
+def test_degraded_chat_skips_search_and_still_returns_cards(client, user, stub_llm, monkeypatch):
     """Gemini down → no cravings → matcher never called, but cards still come back."""
     hits: list = []
     monkeypatch.setattr(
@@ -386,7 +386,7 @@ def test_degraded_chat_skips_search_and_still_returns_cards(
         lambda conn, phrases: hits.append(list(phrases)) or set(),
     )
     stub_llm(extract=llm_extract.ExtractUnavailable("down"))
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["recommendations"]
     assert hits == []
 
@@ -395,8 +395,8 @@ def test_degraded_chat_skips_search_and_still_returns_cards(
 # 5. Contract shape
 # ---------------------------------------------------------------------------
 
-def test_recommendations_carry_the_human_description(conn, client, user_id, stub_llm):
-    """The description rides along on the card so the client can show it.
+def test_recommendations_carry_the_human_description(conn, client, user, stub_llm):
+    """The description rides along on the card so the FE can show it.
 
     Display-only: asserting it is simply a passthrough of the stored column.
     filter.py never reads it, which is the whole safety guarantee — that is
@@ -404,7 +404,7 @@ def test_recommendations_carry_the_human_description(conn, client, user_id, stub
     listed again here.
     """
     stub_llm(extract=llm_extract.ExtractResult())
-    body = chat(client, user_id)
+    body = chat(client, user)
     assert body["recommendations"]
 
     first = body["recommendations"][0]
@@ -415,36 +415,46 @@ def test_recommendations_carry_the_human_description(conn, client, user_id, stub
     assert first["description"] == stored
 
 
-
-
-def test_response_matches_the_chat_contract(client, user_id, stub_llm):
+def test_response_matches_the_chat_contract(client, user, stub_llm):
     stub_llm(extract=llm_extract.ExtractResult())
-    body = chat(client, user_id)
+    body = chat(client, user)
 
     assert set(body) == {"reply", "recommendations", "session_id", "fallback_used", "degraded"}
     schemas.ChatOut.model_validate(body)
 
 
-def test_session_id_is_minted_once_and_then_echoed(client, user_id, stub_llm):
+def test_session_id_is_minted_once_and_then_echoed(client, user, stub_llm):
     stub_llm(extract=llm_extract.ExtractResult())
 
-    first = chat(client, user_id, text="สวัสดี")
+    first = chat(client, user, text="สวัสดี")
     assert first["session_id"]
 
-    second = chat(client, user_id, text="แล้วอย่างอื่นล่ะ", session_id=first["session_id"])
+    second = chat(client, user, text="แล้วอย่างอื่นล่ะ", session_id=first["session_id"])
     assert second["session_id"] == first["session_id"]
 
-    fresh = chat(client, user_id, text="เริ่มใหม่")
+    fresh = chat(client, user, text="เริ่มใหม่")
     assert fresh["session_id"] != first["session_id"]
 
 
-def test_unknown_user_gets_the_error_envelope(client):
-    response = client.post("/chat", json={"user_id": "nobody", "text": "hi"})
+def test_wrong_bearer_token_is_rejected(client, mint):
+    """The guardrail itself: a protected route refuses a token for a user who
+    isn't in the database (the JWT decodes; the account lookup fails)."""
+    response = client.post(
+        "/chat", headers=mint("nobody"), json={"text": "hi"}
+    )
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "NOT_FOUND"
 
 
-def test_a_malformed_request_gets_the_error_envelope(client, user_id):
-    response = client.post("/chat", json={"user_id": user_id, "text": "hi", "limit": 999})
+def test_missing_token_is_rejected(client, user):
+    """No Authorization header at all → 401 before the handler body runs."""
+    response = client.post("/chat", json={"text": "hi"})
+    assert response.status_code == 401
+
+
+def test_a_malformed_request_gets_the_error_envelope(client, user):
+    response = client.post(
+        "/chat", headers=user["headers"], json={"text": "hi", "limit": 999}
+    )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_PREFS"

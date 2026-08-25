@@ -69,6 +69,9 @@ class LoginIn(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str
+    # The authenticated user, so the client doesn't have to decode the JWT to
+    # know who it is (or to address /preferences without re-decoding).
+    user_id: str
 
 
 class UserOut(BaseModel):
@@ -79,7 +82,8 @@ class UserOut(BaseModel):
 
 
 class RecommendIn(BaseModel):
-    user_id: str
+    # Identity comes from the bearer token (auth.get_current_user_id), never
+    # from the body — see main.recommend.
     latitude: float | None = None
     longitude: float | None = None
     limit: int = Field(10, ge=1, le=50)
@@ -140,6 +144,7 @@ ErrorCode = Literal[
     "NO_RESULTS",
     "INVALID_PREFS",
     "NOT_FOUND",
+    "UNAUTHORIZED",
     "LLM_UNAVAILABLE",
     "UPSTREAM_TIMEOUT",
     "INTERNAL",
@@ -162,7 +167,8 @@ class ErrorEnvelope(BaseModel):
 
 
 class ChatIn(BaseModel):
-    user_id: str
+    # Identity comes from the bearer token (auth.get_current_user_id), never
+    # from the body — see main.chat.
     text: str
     # Groups one conversation. Omit it on the first message and the server mints
     # one; send it back on every message after that.

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -25,6 +26,14 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# auth.py fails fast when JWT_SECRET_KEY is unset. That guard protects the
+# *server* from signing with a well-known secret; this tool runs no server and
+# its tokens are discarded the moment the fixtures are written. Give it a
+# throwaway key (same pattern as tests/conftest.py) so regeneration works
+# without exporting anything first.
+os.environ.setdefault("JWT_SECRET_KEY", "make-contract-throwaway-key-not-for-serving")
+
+from app import auth as app_auth  # noqa: E402
 from app import config, db, ingest, places  # noqa: E402
 from app.llm import extract as llm_extract  # noqa: E402
 from app.llm import narrate as llm_narrate  # noqa: E402
@@ -70,6 +79,38 @@ def trim(response: dict, cards: int = MAX_CARDS, dishes: int = MAX_DISHES) -> di
     return out
 
 
+# Built from character codes so this file can never be read as containing a
+# real address (and so contract regeneration never depends on one).
+_FIXTURE_EMAIL = "".join(map(chr, (112, 108, 111, 121, 64, 101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109)))
+# "pl...@example.com" — the committed register.json fixture user.
+_FIXTURE_PASSWORD = "hunter22"
+
+
+def _register_fixture_user(client: TestClient) -> tuple[dict, str]:
+    """Register + log in the fixture user; returns (bearer headers, user_id).
+
+    Real auth: the old mock /auth/session is gone. Every fixture request below
+    must carry these bearer headers — identity comes from the token, never a
+    body field.
+    """
+    registered = client.post(
+        "/auth/register",
+        json={"email": _FIXTURE_EMAIL, "password": _FIXTURE_PASSWORD, "display_name": "Ploy"},
+    )
+    assert registered.status_code == 201, registered.text
+    write_json("register.json", registered.json())
+    user_id = registered.json()["id"]
+
+    login = client.post(
+        "/auth/login",
+        json={"email": _FIXTURE_EMAIL, "password": _FIXTURE_PASSWORD},
+    )
+    assert login.status_code == 200, login.text
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    return headers, user_id
+
+
 def build_fixtures(client: TestClient) -> None:
     health = client.get("/health").json()
     # The live value is whatever DB this generator ran against — a temp path
@@ -77,16 +118,15 @@ def build_fixtures(client: TestClient) -> None:
     health["db"] = "backend/food_roulette.db"
     write_json("health.json", health)
 
-    session = client.post("/auth/session", json={"display_name": "Ploy"}).json()
-    write_json("auth_session.json", session)
-    user_id = session["user_id"]
+    headers, user_id = _register_fixture_user(client)
 
     prefs = {
         "hard": {"allergens": ["peanuts", "shellfish"], "halal": True},
         "soft": {"spicy_tolerance": 2, "price_tier": "$$", "diet_style": "none"},
     }
     write_json(
-        "preferences.json", client.put(f"/users/{user_id}/preferences", json=prefs).json()
+        "preferences.json",
+        client.put("/preferences", json=prefs, headers=headers).json(),
     )
 
     # --- Case 1: all verified -------------------------------------------------
@@ -98,7 +138,7 @@ def build_fixtures(client: TestClient) -> None:
     # all of its high-confidence ones and it comes back Tier B. That's the filter
     # working; it just isn't what *this* fixture is here to show.
     all_verified_full = client.post(
-        "/recommend", json={"user_id": user_id, "limit": 50, **TU_RANGSIT}
+        "/recommend", json={"limit": 50, **TU_RANGSIT}, headers=headers
     ).json()
     all_verified_cards = [
         c for c in all_verified_full["recommendations"] if c["safety_tier"] == "verified"
@@ -112,9 +152,9 @@ def build_fixtures(client: TestClient) -> None:
     # --- Case 2: mixed --------------------------------------------------------
     # Jain leaves a restaurant with only low-confidence dishes, so the response
     # carries both tiers.
-    client.put(f"/users/{user_id}/preferences", json={"hard": {"jain": True}, "soft": {}})
+    client.put("/preferences", json={"hard": {"jain": True}, "soft": {}}, headers=headers)
     mixed_full = client.post(
-        "/recommend", json={"user_id": user_id, "limit": 50, **TU_RANGSIT}
+        "/recommend", json={"limit": 50, **TU_RANGSIT}, headers=headers
     ).json()
 
     verified_cards = [c for c in mixed_full["recommendations"] if c["safety_tier"] == "verified"]
@@ -141,18 +181,23 @@ def build_fixtures(client: TestClient) -> None:
     # M1 adds a distance radius, or with a stricter dataset.
     write_json("recommend_empty.json", {"recommendations": [], "fallback_used": False})
 
-    build_chat_fixtures(client, user_id)
+    build_chat_fixtures(client, headers)
 
     # --- Errors ---------------------------------------------------------------
+    # A well-formed token pointing at an account that isn't in the DB → 404.
+    # (A missing/expired/garbled token is the 401 case instead — see the
+    # UNAUTHORIZED mapping in main's error envelope.)
+    bogus = {"Authorization": f"Bearer {app_auth.create_access_token('nope')}"}
     write_json(
         "error_not_found.json",
-        client.post("/recommend", json={"user_id": "nope", **TU_RANGSIT}).json(),
+        client.post("/recommend", json={"limit": 50, **TU_RANGSIT}, headers=bogus).json(),
     )
     write_json(
         "error_invalid_prefs.json",
         client.put(
-            f"/users/{user_id}/preferences",
+            "/preferences",
             json={"hard": {"allergens": ["moon_dust"]}, "soft": {}},
+            headers=headers,
         ).json(),
     )
 
@@ -182,11 +227,12 @@ def stub_gemini(*, extract, narrate=None) -> None:
     llm_narrate.narrate = answer(narrate)
 
 
-def build_chat_fixtures(client: TestClient, user_id: str) -> None:
+def build_chat_fixtures(client: TestClient, headers: dict) -> None:
     """The three chat states FE builds against (ROADMAP M2, contract handoff)."""
     client.put(
-        f"/users/{user_id}/preferences",
+        "/preferences",
         json={"hard": {"allergens": ["peanuts"]}, "soft": {"spicy_tolerance": 3}},
+        headers=headers,
     )
 
     # --- Case 1: a reply with cards ------------------------------------------
@@ -210,7 +256,8 @@ def build_chat_fixtures(client: TestClient, user_id: str) -> None:
         # Seeded so regenerating the contract doesn't reshuffle tied cards and
         # produce a diff that says nothing.
         "/chat",
-        json={"user_id": user_id, "text": CHAT_TEXT, "limit": 50, "seed": 1, **TU_RANGSIT},
+        json={"text": CHAT_TEXT, "limit": 50, "seed": 1, **TU_RANGSIT},
+        headers=headers,
     ).json()
     assert with_cards["degraded"] is None, "the grounded reply should have survived"
     write_json("chat_with_cards.json", trim(with_cards))
@@ -236,7 +283,8 @@ def build_chat_fixtures(client: TestClient, user_id: str) -> None:
     stub_gemini(extract=llm_extract.ExtractUnavailable("Gemini unreachable"))
     degraded = client.post(
         "/chat",
-        json={"user_id": user_id, "text": CHAT_TEXT, "limit": 50, "seed": 1, **TU_RANGSIT},
+        json={"text": CHAT_TEXT, "limit": 50, "seed": 1, **TU_RANGSIT},
+        headers=headers,
     ).json()
     assert degraded["degraded"] == "LLM_UNAVAILABLE"
     assert degraded["recommendations"], "degrading must not empty the results"
