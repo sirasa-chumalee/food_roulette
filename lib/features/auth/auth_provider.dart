@@ -12,6 +12,13 @@ import 'auth_repository.dart';
 
 enum AuthStatus { unknown, loggedIn, loggedOut }
 
+/// Thrown when the backend rejects the token (401/403). The session is dead —
+/// call sites must not mask this with offline/mock fallbacks.
+class AuthRequiredError implements Exception {
+  @override
+  String toString() => 'Authentication required';
+}
+
 class AuthState {
   final AuthStatus status;
   final String? userId;
@@ -99,6 +106,15 @@ class AuthController extends Notifier<AuthState> {
       _currentToken = null;
       state = const AuthState(status: AuthStatus.loggedOut);
     }
+  }
+
+  /// For API call sites: the backend answered 401/403, so the token is dead.
+  /// Logs out exactly once (parallel failing calls see the cleared token and
+  /// skip straight to the throw) and always throws [AuthRequiredError] so no
+  /// caller masks a dead session behind offline/mock fallback data.
+  Future<Never> sessionExpired() async {
+    if (_currentToken != null) await logout();
+    throw AuthRequiredError();
   }
 }
 

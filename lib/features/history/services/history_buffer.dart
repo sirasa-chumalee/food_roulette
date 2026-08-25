@@ -2,16 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/constants.dart';
 import '../../../data/models/history.dart';
 import '../../auth/auth_provider.dart';
 
 class HistoryBuffer {
   static const int batchThreshold = 5;
   static const Duration flushInterval = Duration(seconds: 3);
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
-  );
+  static final String baseUrl = AppConfig.baseUrl;
 
   final Ref _ref;
   final List<HistoryEvent> _queue = [];

@@ -8,8 +8,8 @@ import '../../../data/models/recommendation.dart';
 import '../../../core/constants.dart';
 import '../../auth/auth_provider.dart';
 
-const String baseUrl = AppConfig.baseUrl;
-
+// ignore: non_constant_identifier_names
+final String baseUrl = AppConfig.baseUrl;
 /// State for the chat screen.
 class ChatState {
   final String sessionId;
@@ -124,10 +124,15 @@ class ChatNotifier extends Notifier<ChatState> {
           fallbackUsed: fallbackUsed,
           degradedCode: degradedCode,
         );
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // Dead token: sessionExpired throws, caught below as a quiet no-op —
+        // the router is already bouncing to /login.
+        await ref.read(authProvider.notifier).sessionExpired();
       } else {
         await _fallbackToPlainResults('LLM_UNAVAILABLE');
       }
-    } catch (_) {
+    } catch (e) {
+      if (e is AuthRequiredError) return; // logged out; screen is going away
       await _fallbackToPlainResults('LLM_UNAVAILABLE');
     }
   }
@@ -197,6 +202,10 @@ class ChatNotifier extends Notifier<ChatState> {
             .map((r) => RecommendedRestaurant.fromJson(r, baseUrl))
             .take(4)
             .toList();
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // Dead token — same quiet no-op as above: logout is in flight and
+        // the router redirect takes over from here.
+        await ref.read(authProvider.notifier).sessionExpired();
       }
 
       final updated = List<ChatMessage>.from(state.messages);
@@ -217,6 +226,10 @@ class ChatNotifier extends Notifier<ChatState> {
         isTyping: false,
         messages: updated,
       );
+    } on AuthRequiredError {
+      // Dead token: logout is in flight and the router redirect takes over
+      // from here — nothing left for this fallback to do.
+      return;
     } catch (_) {
       addError('Unable to connect to recommendation service at this time.');
     }

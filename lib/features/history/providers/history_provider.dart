@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../data/models/history.dart';
+import '../../../core/constants.dart';
 import '../../../state/providers.dart';
+import '../../auth/auth_provider.dart';
 
-const String baseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://127.0.0.1:8000',
-);
+// Backend address comes from AppConfig (platform-aware loopback).
+final String baseUrl = AppConfig.baseUrl;
 
 /// Model holding both history record and resolved display name
 class HistoryDisplayItem {
@@ -34,6 +34,12 @@ final historyListProvider =
     // 2. Fetch Restaurants for Name Lookup
     final restaurantsResponse =
         await http.get(Uri.parse('$baseUrl/restaurants'));
+
+    if (historyResponse.statusCode == 401 || historyResponse.statusCode == 403) {
+      // Dead token: log out; the thrown AuthRequiredError lands in the catch
+      // below and the screen renders empty while the router bounces to /login.
+      await ref.read(authProvider.notifier).sessionExpired();
+    }
 
     if (historyResponse.statusCode == 200) {
       final historyData = jsonDecode(historyResponse.body);

@@ -12,7 +12,9 @@ import '../data/models/recommendation.dart';
 import '../data/models/restaurant.dart';
 import '../data/models/user_preferences.dart';
 
-const baseUrl = 'http://127.0.0.1:8000';
+// Backend address comes from AppConfig (platform-aware loopback; override
+// with --dart-define=API_BASE_URL=...).
+final String baseUrl = AppConfig.baseUrl;
 
 /// Shared bearer-header builder for every authenticated call. Identity lives
 /// in the Authorization header (signed JWT); the backend never accepts a
@@ -43,6 +45,8 @@ class ProfileNotifier extends AsyncNotifier<UserPreferences> {
       if (response.statusCode == 200) {
         // Refresh recommendations automatically when preferences update
         ref.invalidate(recommendationsProvider);
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        await ref.read(authProvider.notifier).sessionExpired();
       }
     } catch (_) {
       // Backend optional during UI mock testing
@@ -100,10 +104,17 @@ class RecommendationsNotifier extends AsyncNotifier<RecommendOut> {
           baseUrl,
         );
       }
+      // Dead session: log out and propagate — never fall back to mock data
+      // while the user is actually logged out.
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await ref.read(authProvider.notifier).sessionExpired();
+      }
 
       throw Exception("server returned ${response.statusCode}");
-    } catch (_) {
-    return RecommendOut(
+    } catch (e) {
+      // A dead session must surface, not masquerade as offline mode.
+      if (e is AuthRequiredError) rethrow;
+      return RecommendOut(
       fallbackUsed: true,
       recommendations: [
         RecommendedRestaurant(

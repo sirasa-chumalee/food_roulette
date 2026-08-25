@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/constants.dart';
 import '../../../data/models/restaurant_detail.dart';
 
-const String baseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://127.0.0.1:8000',
-);
+// Backend address comes from AppConfig (platform-aware loopback).
+final String baseUrl = AppConfig.baseUrl;
 
 final restaurantDetailProvider =
     FutureProvider.family.autoDispose<RestaurantDetail, String>(
