@@ -212,7 +212,7 @@ wrong, nothing built on top of it is safe.
       · `seed` on `POST /recommend` makes an ordering replayable (M5 needs it)
 - [x] Derive `price_tier` per restaurant from its menu price distribution (fills the null `price_band`)
       · `pricing.py`, run at ingest time; median dish price → 15/19/12/4 across `$`/`$$`/`$$$`/`$$$$`
-- [x] Endpoints: `POST /auth/session` (mock), `GET|PUT /users/{id}/preferences`, `POST /recommend`
+- [x] Endpoints: `POST /auth/register` + `POST /auth/login` (JWT bearer), `GET|PUT /preferences` (identity from token), `POST /recommend`
       · built earlier by the team; `/recommend` now delegates to `filter.py` + `ranking.py`
 - [ ] **Test suite is the deliverable here**, not the endpoint:
       - a peanut allergy returns zero dishes with `peanuts=1` — assert across all 1250 rows
@@ -288,7 +288,7 @@ Deliberately placed **before** Places: it's cheap, needs no API key, and immedia
 - [x] Accept **batched** events (FE buffers impressions; one request per N events or per few seconds)
 - [x] Session-scoped rejection penalty feeding `ranking.py` — a rejected restaurant is down-ranked
       for the rest of the session
-- [x] `GET /history?user_id=` for the History screen
+- [x] `GET /history` (bearer-authenticated identity, `?limit=`) for the History screen
 
 **Frontend**
 - [x] Fire-and-forget event buffer (never blocks or fails a UI interaction)
