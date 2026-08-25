@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../data/models/history.dart';
+import '../../../state/providers.dart';
 
 const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -24,9 +25,12 @@ class HistoryDisplayItem {
 final historyListProvider =
     FutureProvider.autoDispose<List<HistoryDisplayItem>>((ref) async {
   try {
-    // 1. Fetch History
-    final historyResponse =
-        await http.get(Uri.parse('$baseUrl/history?user_id=1&limit=50'));
+    // 1. Fetch History — identity comes from the bearer token, not a query
+    // param; the backend no longer accepts user_id here.
+    final historyResponse = await http.get(
+      Uri.parse('$baseUrl/history?limit=50'),
+      headers: authHeaders(ref),
+    );
     // 2. Fetch Restaurants for Name Lookup
     final restaurantsResponse =
         await http.get(Uri.parse('$baseUrl/restaurants'));

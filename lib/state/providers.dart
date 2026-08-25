@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/constants.dart';
+import '../features/auth/auth_provider.dart';
 import '../data/api/api_client.dart';
 import '../data/api/http_api.dart';
 import '../data/api/mock_api.dart';
@@ -12,6 +13,17 @@ import '../data/models/restaurant.dart';
 import '../data/models/user_preferences.dart';
 
 const baseUrl = 'http://127.0.0.1:8000';
+
+/// Shared bearer-header builder for every authenticated call. Identity lives
+/// in the Authorization header (signed JWT); the backend never accepts a
+/// user_id from the body anymore.
+Map<String, String> authHeaders(Ref ref) {
+  final token = ref.read(authProvider.notifier).currentToken;
+  return {
+    'Content-Type': 'application/json',
+    if (token != null) 'Authorization': 'Bearer $token',
+  };
+}
 
 // 1. Profile / Preferences Notifier
 class ProfileNotifier extends AsyncNotifier<UserPreferences> {
@@ -24,8 +36,8 @@ class ProfileNotifier extends AsyncNotifier<UserPreferences> {
     state = AsyncValue.data(newPrefs);
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/users/1/preferences'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/preferences'),
+        headers: authHeaders(ref),
         body: jsonEncode(newPrefs.toJson()),
       );
       if (response.statusCode == 200) {
@@ -73,11 +85,8 @@ class RecommendationsNotifier extends AsyncNotifier<RecommendOut> {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/recommend'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders(ref),
         body: jsonEncode({
-          "user_id": "1",
           "limit": 4,
 
           // Optional if your backend supports chat prompts

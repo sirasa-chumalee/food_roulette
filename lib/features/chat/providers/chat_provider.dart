@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/chat_message.dart';
 import '../../../data/models/recommendation.dart';
 import '../../../core/constants.dart';
+import '../../auth/auth_provider.dart';
 
 const String baseUrl = AppConfig.baseUrl;
 
@@ -56,6 +57,16 @@ class ChatState {
 class ChatNotifier extends Notifier<ChatState> {
   final _uuid = const Uuid();
 
+  /// Identity travels in the Authorization header; the backend derives the
+  /// user from the signed JWT, never from a body field.
+  Map<String, String> _authHeaders() {
+    final token = ref.read(authProvider.notifier).currentToken;
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
   @override
   ChatState build() {
     return ChatState.initial();
@@ -87,10 +98,9 @@ class ChatNotifier extends Notifier<ChatState> {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/chat'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders(),
         body: jsonEncode({
           'session_id': state.sessionId,
-          'user_id': '1',
           'text': trimmedText,
           'limit': 4,
         }),
@@ -170,9 +180,8 @@ class ChatNotifier extends Notifier<ChatState> {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/recommend'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders(),
         body: jsonEncode({
-          'user_id': '1',
           'limit': 4,
         }),
       );

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../data/models/history.dart';
+import '../../auth/auth_provider.dart';
 
 class HistoryBuffer {
   static const int batchThreshold = 5;
@@ -12,17 +13,17 @@ class HistoryBuffer {
     defaultValue: 'http://127.0.0.1:8000',
   );
 
-  final String userId;
+  final Ref _ref;
   final List<HistoryEvent> _queue = [];
   Timer? _timer;
 
-  HistoryBuffer({this.userId = '1'}) {
+  HistoryBuffer(this._ref) {
     _startTimer();
   }
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(flushInterval, (_) => flush());
+    _timer = Timer.periodic(flushInterval, (_) => flush(_ref));
   }
 
   /// Fire-and-forget logging (never blocks UI)
@@ -42,13 +43,21 @@ class HistoryBuffer {
     );
 
     if (_queue.length >= batchThreshold) {
-      flush();
+      flush(_ref);
     }
   }
 
-  /// Flush queued events to POST /history
-  Future<void> flush() async {
+  /// Flush queued events to POST /history. Identity comes from the bearer
+  /// token; without a token the batch is dropped — anonymous history writes
+  /// are rejected by the backend anyway.
+  Future<void> flush(Ref? ref) async {
     if (_queue.isEmpty) return;
+
+    final token = ref?.read(authProvider.notifier).currentToken;
+    if (token == null) {
+      _queue.clear();
+      return;
+    }
 
     final batch = List<HistoryEvent>.from(_queue);
     _queue.clear();
@@ -56,9 +65,11 @@ class HistoryBuffer {
     try {
       await http.post(
         Uri.parse('$baseUrl/history'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
-          'user_id': userId,
           'events': batch.map((e) => e.toJson()).toList(),
         }),
       );
@@ -69,12 +80,12 @@ class HistoryBuffer {
 
   void dispose() {
     _timer?.cancel();
-    flush();
+    flush(_ref);
   }
 }
 
 final historyBufferProvider = Provider<HistoryBuffer>((ref) {
-  final buffer = HistoryBuffer(userId: '1');
+  final buffer = HistoryBuffer(ref);
   ref.onDispose(() => buffer.dispose());
   return buffer;
 });

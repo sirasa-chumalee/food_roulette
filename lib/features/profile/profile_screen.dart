@@ -3,16 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/user_preferences.dart';
 import '../../state/providers.dart';
+import '../auth/auth_provider.dart';
 import '../history/providers/history_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // 0 = Preference, 1 = History
   int _selectedSegment = 0;
 
@@ -90,6 +91,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 20),
+
+            // Log out: clears the stored token and bounces the router back
+            // to /login.
+            OutlinedButton.icon(
+              onPressed: () async {
+                await ref.read(authProvider.notifier).logout();
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Log out'),
+            ),
 
             // Conditionally display content based on toggle
             _selectedSegment == 0
